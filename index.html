@@ -1,0 +1,558 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0f1115">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>YouTubeBot Panel</title>
+<style>
+:root{
+  --bg:#0f1115;--kart:#181b22;--kart2:#20242d;--cizgi:#2c313c;--yazi:#e8eaef;--soluk:#9aa1ad;
+  --vurgu:#ffd400;--yesil:#2ecc71;--kirmizi:#ff5c5c;--mavi:#4da3ff;--turuncu:#ffa94d;--r:14px;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--yazi);font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+body{padding:0 0 110px}
+header{position:sticky;top:0;z-index:5;background:rgba(15,17,21,.96);backdrop-filter:blur(8px);border-bottom:1px solid var(--cizgi)}
+.ust{display:flex;align-items:center;justify-content:space-between;padding:12px 16px 6px}
+.ust h1{font-size:17px;margin:0}
+.ust small{color:var(--soluk)}
+nav{display:flex;gap:4px;padding:6px 10px 10px;overflow-x:auto}
+nav button{flex:0 0 auto;background:var(--kart);color:var(--soluk);border:1px solid var(--cizgi);border-radius:999px;padding:8px 13px;font-size:14px}
+nav button.aktif{background:var(--vurgu);color:#111;border-color:var(--vurgu);font-weight:600}
+main{padding:12px 16px;max-width:760px;margin:0 auto}
+.kart{background:var(--kart);border:1px solid var(--cizgi);border-radius:var(--r);padding:14px;margin:0 0 12px}
+.kart h3{margin:0 0 4px;font-size:16px}
+.alt{color:var(--soluk);font-size:13px}
+.rozet{display:inline-block;font-size:12px;padding:2px 8px;border-radius:999px;background:var(--kart2);border:1px solid var(--cizgi);color:var(--soluk)}
+.rozet.hazir{color:var(--vurgu);border-color:#665a00}.rozet.onay{color:var(--yesil);border-color:#1d6b3d}
+.rozet.red{color:var(--kirmizi);border-color:#7a2b2b}.rozet.yuk{color:var(--mavi);border-color:#24507d}
+.butonlar{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+button,.btn{font:inherit;cursor:pointer;border:1px solid var(--cizgi);background:var(--kart2);color:var(--yazi);border-radius:10px;padding:8px 12px;text-decoration:none;display:inline-flex;align-items:center;gap:4px}
+button:disabled{opacity:.45}
+button.ana{background:var(--vurgu);border-color:var(--vurgu);color:#111;font-weight:600}
+button.sec-onay{background:#143d27;border-color:var(--yesil)}button.sec-red{background:#3d1717;border-color:var(--kirmizi)}
+details{margin-top:8px}summary{color:var(--soluk);cursor:pointer}
+blockquote{margin:6px 0 0;padding:6px 10px;border-left:3px solid var(--vurgu);background:var(--kart2);border-radius:6px}
+blockquote p{margin:2px 0}
+label{display:block;margin:12px 0 4px;color:var(--soluk);font-size:13px}
+input,select,textarea{width:100%;font:inherit;color:var(--yazi);background:var(--kart2);border:1px solid var(--cizgi);border-radius:10px;padding:9px 10px}
+textarea{min-height:110px;resize:vertical}
+input[type=checkbox]{width:auto}
+.satir{display:flex;gap:8px;align-items:center}
+.satir>*{flex:1}
+.gunler{display:flex;flex-wrap:wrap;gap:6px}.gunler label{display:flex;gap:4px;align-items:center;margin:0;background:var(--kart2);padding:6px 9px;border-radius:8px;border:1px solid var(--cizgi);color:var(--yazi)}
+.cubuk{height:8px;background:var(--kart2);border-radius:4px;overflow:hidden;margin-top:4px}.cubuk i{display:block;height:100%;background:var(--vurgu)}
+#bildirim{position:fixed;left:50%;transform:translateX(-50%);bottom:90px;z-index:20;background:#262b35;border:1px solid var(--cizgi);padding:10px 14px;border-radius:12px;max-width:92vw;display:none;box-shadow:0 6px 24px rgba(0,0,0,.4)}
+#kararCubugu{position:fixed;left:0;right:0;bottom:0;z-index:10;background:#151820;border-top:1px solid var(--cizgi);padding:10px 16px calc(10px + env(safe-area-inset-bottom));display:none;align-items:center;justify-content:space-between;gap:10px}
+video{width:100%;max-height:70vh;border-radius:10px;margin-top:10px;background:#000}
+.modal{position:fixed;inset:0;z-index:30;background:rgba(0,0,0,.6);display:none;align-items:flex-end;justify-content:center}
+.modal .icerik{background:var(--kart);width:100%;max-width:760px;max-height:92vh;overflow:auto;border-radius:18px 18px 0 0;padding:16px 16px calc(20px + env(safe-area-inset-bottom))}
+.uyari{background:#2b2410;border:1px solid #665a00;color:#f3e3a0;padding:10px;border-radius:10px;font-size:13px}
+.hata{background:#2b1414;border:1px solid #7a2b2b;color:#ffc9c9;padding:10px;border-radius:10px;font-size:13px}
+.ince{font-size:12px;color:var(--soluk)}
+a{color:var(--mavi)}
+.yukleme{height:6px;background:var(--kart2);border-radius:3px;overflow:hidden;margin-top:8px;display:none}.yukleme i{display:block;height:100%;width:0;background:var(--yesil)}
+</style>
+</head>
+<body>
+<header>
+  <div class="ust"><h1>🎬 YouTubeBot</h1><small id="kullanici"></small></div>
+  <nav id="sekmeler">
+    <button data-s="videolar" class="aktif">🎬 Videolar</button>
+    <button data-s="ayarlar">⚙️ Ayarlar</button>
+    <button data-s="istatistik">📊 İstatistik</button>
+    <button data-s="izin">🔑 YouTube izni</button>
+    <button data-s="isler">🔄 İşler</button>
+  </nav>
+</header>
+<main id="ana"></main>
+<div id="kararCubugu"><span id="kararOzet"></span><span><button id="kararIptal">Vazgeç</button> <button class="ana" id="kararGonder">Gönder</button></span></div>
+<div id="bildirim"></div>
+<div class="modal" id="modal"><div class="icerik" id="modalIcerik"></div></div>
+
+<script>
+// ─────────────────────────────────────────
+//  YAPILANDIRMA
+// ─────────────────────────────────────────
+const VARSAYILAN_DEPO = "angolasakson31-bot/YouTubeBot";
+const SCOPES = ["https://www.googleapis.com/auth/youtube.upload",
+                "https://www.googleapis.com/auth/youtube.readonly",
+                "https://www.googleapis.com/auth/yt-analytics.readonly"];
+// ayarlar.py'deki varsayılanların aynısı (ayarlar.json yoksa bunlar gösterilir)
+const VARSAYILAN_AYARLAR = {
+  YAYINLANMA_SAATLERI: ["12:00", "20:00"], TREND_GUNLERI: [3, 4, 5, 6],
+  KATEGORILER: ["bilimin açıklayamadığı gizemli olaylar", "uzay ve evrenin akıl almaz gerçekleri",
+    "insan beyninin karanlık sırları", "tarihin gizli kalmış olayları",
+    "hayvanların inanılmaz ve bilinmeyen yetenekleri", "teknolojinin gelecekte yapacağı şaşırtıcı şeyler",
+    "dünyanın en tuhaf ve sıra dışı yerleri"],
+  MALIYET_PROFILI: "dengeli", OTOMATIK_ONAY: true, BILGI_DOGRULAMA: true, GUNLUK_YUKLEME_LIMITI: 6,
+  TTS_SES: "tr-TR-AhmetNeural", TTS_HIZ: "+10%", KARARTMA: 0.35, VIDEO_KLIP_ONCELIKLI: true,
+  ALTYAZI_BOYUT: 96, ALTYAZI_KELIME: 3, HOOK_SURE: 2.8, HOOK_BOYUT: 100,
+};
+const GUN_ADLARI = ["Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz"];
+const DURUM = {
+  bekliyor: ["⏳ Sırada", ""], seslendirildi: ["🎙️ Üretiliyor", ""], video_hazir: ["🎬 Onay bekliyor", "hazir"],
+  onaylandi: ["👍 Onaylandı", "onay"], reddedildi: ["👎 Reddedildi", "red"], yuklendi: ["✅ YouTube'da", "yuk"],
+};
+
+let TOKEN = localStorage.getItem("ytb_token") || "";
+let DEPO = localStorage.getItem("ytb_depo") || VARSAYILAN_DEPO;
+let PLAN = [], RELEASES = {}, KARARLAR = {}, SEKME = "videolar";
+
+// ─────────────────────────────────────────
+//  YARDIMCILAR
+// ─────────────────────────────────────────
+const $ = (s, k = document) => k.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+function bildir(metin, sure = 3500) {
+  const b = $("#bildirim"); b.textContent = metin; b.style.display = "block";
+  clearTimeout(bildir.t); bildir.t = setTimeout(() => b.style.display = "none", sure);
+}
+function b64Kodla(metin) {
+  const bayt = new TextEncoder().encode(metin); let s = "";
+  for (let i = 0; i < bayt.length; i += 0x8000) s += String.fromCharCode.apply(null, bayt.subarray(i, i + 0x8000));
+  return btoa(s);
+}
+async function gh(yol, ayar = {}) {
+  const r = await fetch(yol.startsWith("http") ? yol : "https://api.github.com" + yol, {
+    ...ayar,
+    headers: {Authorization: "Bearer " + TOKEN, Accept: "application/vnd.github+json",
+              "X-GitHub-Api-Version": "2022-11-28", ...(ayar.headers || {})},
+  });
+  if (!r.ok && r.status !== 404) {
+    let m = ""; try { m = (await r.json()).message; } catch (e) {}
+    throw new Error(`GitHub ${r.status}: ${m}`);
+  }
+  return r;
+}
+async function dosyaOku(yol, varsayilan = null) {
+  const r = await gh(`/repos/${DEPO}/contents/${yol}?ref=main&t=${Date.now()}`,
+                     {headers: {Accept: "application/vnd.github.raw+json"}});
+  if (r.status === 404) return varsayilan;
+  const metin = await r.text();
+  try { return JSON.parse(metin); } catch (e) { return metin; }
+}
+async function dosyaYaz(yol, icerik, mesaj) {
+  const metin = typeof icerik === "string" ? icerik : JSON.stringify(icerik, null, 2);
+  const mevcut = await gh(`/repos/${DEPO}/contents/${yol}?ref=main&t=${Date.now()}`);
+  const sha = mevcut.status === 404 ? undefined : (await mevcut.json()).sha;
+  await gh(`/repos/${DEPO}/contents/${yol}`, {method: "PUT",
+    body: JSON.stringify({message: mesaj, content: b64Kodla(metin), sha, branch: "main"})});
+}
+// Tetik: bu dosya değişince ilgili GitHub Actions işi başlar (commit mesajında [tetik] olmalı)
+async function tetikle(dosya, veri, aciklama) {
+  await dosyaYaz(`tetik/${dosya}`, {...veri, zaman: new Date().toISOString(), kaynak: "panel"},
+                 `[tetik] Panel: ${aciklama}`);
+}
+function modalAc(html) { $("#modalIcerik").innerHTML = html; $("#modal").style.display = "flex"; }
+function modalKapat() { $("#modal").style.display = "none"; $("#modalIcerik").innerHTML = ""; }
+$("#modal").addEventListener("click", e => { if (e.target.id === "modal") modalKapat(); });
+
+// ─────────────────────────────────────────
+//  KURULUM (token)
+// ─────────────────────────────────────────
+function kurulumEkrani(hata = "") {
+  $("#sekmeler").style.display = "none";
+  $("#ana").innerHTML = `
+    <div class="kart">
+      <h3>🔐 İlk kurulum</h3>
+      <p class="alt">GitHub erişim anahtarını (token) bir kere gir. Sadece bu telefonda saklanır.</p>
+      ${hata ? `<div class="hata">${esc(hata)}</div>` : ""}
+      <label>GitHub token</label><input id="tokenGiris" type="password" placeholder="github_pat_..." autocomplete="off">
+      <label>Depo</label><input id="depoGiris" value="${esc(DEPO)}">
+      <div class="butonlar"><button class="ana" id="tokenKaydet">Kaydet ve bağlan</button></div>
+    </div>`;
+  $("#tokenKaydet").onclick = async () => {
+    TOKEN = $("#tokenGiris").value.trim(); DEPO = $("#depoGiris").value.trim() || VARSAYILAN_DEPO;
+    try {
+      const r = await gh(`/repos/${DEPO}`);
+      if (r.status === 404) throw new Error("Depo bulunamadı ya da token'ın bu depoya erişimi yok.");
+      localStorage.setItem("ytb_token", TOKEN); localStorage.setItem("ytb_depo", DEPO);
+      basla();
+    } catch (e) { kurulumEkrani(e.message); }
+  };
+}
+
+// ─────────────────────────────────────────
+//  VİDEOLAR
+// ─────────────────────────────────────────
+async function releaseAl(etiket) {
+  if (RELEASES[etiket] !== undefined) return RELEASES[etiket];
+  const r = await gh(`/repos/${DEPO}/releases/tags/${etiket}`);
+  RELEASES[etiket] = r.status === 404 ? null : await r.json();
+  return RELEASES[etiket];
+}
+async function assetBul(v) {
+  if (!v.release) return null;
+  const rel = await releaseAl(v.release);
+  return rel ? {rel, asset: (rel.assets || []).find(a => a.name === v.id + ".mp4")} : null;
+}
+
+async function videolar() {
+  $("#ana").innerHTML = `<p class="alt">Yükleniyor…</p>`;
+  PLAN = await dosyaOku("haftalik_plan.json", []);
+  const haftalar = [...new Set(PLAN.map(v => v.hafta))].sort().reverse();
+  if (!haftalar.length) { $("#ana").innerHTML = `<div class="kart">Henüz video yok.</div>`; return; }
+  let html = `<div class="butonlar" style="margin:0 0 12px"><button id="yenile">↻ Yenile</button>
+    <button id="uretBaslat">▶️ Şimdi üretimi başlat</button></div>`;
+  for (const h of haftalar) {
+    const vs = PLAN.filter(v => v.hafta === h);
+    const bekleyen = vs.filter(v => v.durum === "video_hazir").length;
+    html += `<h2 style="font-size:16px;margin:18px 0 8px">📅 ${esc(h)} haftası
+      <span class="alt">(${vs.length} video, ${bekleyen} onay bekliyor)</span></h2>`;
+    if (bekleyen) html += `<div class="butonlar" style="margin:0 0 10px">
+      <button data-hepsi="${esc(h)}">✅ Bu haftanın hepsini onayla</button></div>`;
+    vs.forEach((v, i) => html += videoKarti(v, i + 1));
+  }
+  $("#ana").innerHTML = html;
+  $("#yenile").onclick = () => { RELEASES = {}; videolar(); };
+  $("#uretBaslat").onclick = async () => {
+    if (!confirm("Bekleyen konular için üretim başlatılsın mı? (Yeni hafta yoksa sadece bekleyenler üretilir.)")) return;
+    await tetikle("uretim.json", {test: false}, "üretimi başlat"); bildir("▶️ Üretim başlatıldı. 'İşler' sekmesinden izleyebilirsin.");
+  };
+  document.querySelectorAll("[data-hepsi]").forEach(b => b.onclick = () => {
+    PLAN.filter(v => v.hafta === b.dataset.hepsi && v.durum === "video_hazir").forEach(v => KARARLAR[v.id] = "onay");
+    kararCubugu(); videolar();
+  });
+  document.querySelectorAll("[data-islem]").forEach(b => b.onclick = () => videoIslem(b.dataset.islem, b.dataset.id, b));
+  kararCubugu();
+}
+
+function videoKarti(v, no) {
+  const [durumYazi, durumSinif] = DURUM[v.durum] || [v.durum, ""];
+  const karar = KARARLAR[v.id];
+  const id = esc(v.id);
+  let b = "";
+  if (v.durum === "video_hazir") b += `
+    <button data-islem="onay" data-id="${id}" class="${karar === "onay" ? "sec-onay" : ""}">✅ Onayla</button>
+    <button data-islem="red" data-id="${id}" class="${karar === "red" ? "sec-red" : ""}">❌ Reddet</button>`;
+  if (v.release) b += `<button data-islem="izle" data-id="${id}">▶️ İzle</button>
+    <button data-islem="indir" data-id="${id}">⬇️ İndir</button>`;
+  if (v.youtube_id) b += `<a class="btn" target="_blank" href="https://youtube.com/shorts/${esc(v.youtube_id)}">📺 YouTube</a>`;
+  if (!["yuklendi", "bekliyor", "seslendirildi"].includes(v.durum)) b += `
+    <button data-islem="duzenle" data-id="${id}">✏️ Düzenle / yeniden üret</button>
+    <button data-islem="kendi" data-id="${id}">📤 Kendi videomu yükle</button>`;
+  const cumleler = (v.cumleler || []).map(c => `<p>${esc(c)}</p>`).join("");
+  const duzeltme = (v.dogrulama_duzeltmeleri || []).length;
+  return `<div class="kart" id="k_${id}">
+    <div class="alt">${no}. ${esc(v.gun)} ${esc(v.saat)} · ${v.tur === "trend" ? "📈 güncel" : "🌿 evergreen"}</div>
+    <h3>${esc(v.baslik || v.konu)}</h3>
+    <span class="rozet ${durumSinif}">${durumYazi}</span>
+    ${v.elle_duzenlendi ? `<span class="rozet">✏️ elle düzenlendi</span>` : ""}
+    ${v.hook ? `<div class="alt" style="margin-top:6px">Ekran yazısı: <b>${esc(v.hook)}</b></div>` : ""}
+    ${duzeltme ? `<div class="alt">🔎 ${duzeltme} bilgi düzeltmesi yapıldı</div>` : ""}
+    ${cumleler ? `<details><summary>Senaryo</summary><blockquote>${cumleler}</blockquote>
+      ${(v.hook_secenekleri || []).length ? `<div class="ince" style="margin-top:6px">Açılış seçenekleri:<br>${
+        v.hook_secenekleri.map(h => (h === (v.cumleler || [])[0] ? "🏆 " : "• ") + esc(h)).join("<br>")}</div>` : ""}
+    </details>` : ""}
+    <div class="butonlar">${b}</div>
+    <div id="oynat_${id}"></div>
+    <div class="yukleme" id="yb_${id}"><i></i></div>
+  </div>`;
+}
+
+function kararCubugu() {
+  const onay = Object.values(KARARLAR).filter(k => k === "onay").length;
+  const red = Object.values(KARARLAR).filter(k => k === "red").length;
+  const c = $("#kararCubugu");
+  c.style.display = (onay + red) ? "flex" : "none";
+  $("#kararOzet").textContent = `👍 ${onay} onay · 👎 ${red} ret`;
+}
+$("#kararIptal").onclick = () => { KARARLAR = {}; kararCubugu(); if (SEKME === "videolar") videolar(); };
+$("#kararGonder").onclick = async () => {
+  const onay = Object.keys(KARARLAR).filter(k => KARARLAR[k] === "onay");
+  const red = Object.keys(KARARLAR).filter(k => KARARLAR[k] === "red");
+  $("#kararGonder").disabled = true;
+  try {
+    await tetikle("onay.json", {onayla: onay.join(","), reddet: red.join(","), kontrol: false},
+                  `${onay.length} onay, ${red.length} ret`);
+    KARARLAR = {}; kararCubugu();
+    bildir("✅ Kararlar gönderildi. Onaylananlar birkaç dakika içinde YouTube'a yüklenmeye başlar.", 5000);
+  } catch (e) { bildir("❌ " + e.message, 6000); }
+  $("#kararGonder").disabled = false;
+};
+
+async function videoBlob(v) {
+  const b = await assetBul(v);
+  if (!b || !b.asset) throw new Error("Video dosyası bulunamadı.");
+  const r = await fetch(b.asset.url, {headers: {Authorization: "Bearer " + TOKEN, Accept: "application/octet-stream"}});
+  if (!r.ok) throw new Error("İndirilemedi (" + r.status + ")");
+  return await r.blob();
+}
+function githubLinki(v) { return `https://github.com/${DEPO}/releases/download/${v.release}/${v.id}.mp4`; }
+
+async function videoIslem(islem, id, buton) {
+  const v = PLAN.find(x => x.id === id);
+  if (islem === "onay" || islem === "red") {
+    KARARLAR[id] = KARARLAR[id] === islem ? undefined : islem;
+    if (!KARARLAR[id]) delete KARARLAR[id];
+    kararCubugu(); videolar(); return;
+  }
+  if (islem === "izle" || islem === "indir") {
+    const eski = buton.textContent; buton.disabled = true; buton.textContent = "⏳";
+    try {
+      const blob = await videoBlob(v); const url = URL.createObjectURL(blob);
+      if (islem === "izle") $("#oynat_" + id).innerHTML = `<video src="${url}" controls autoplay playsinline></video>`;
+      else { const a = document.createElement("a"); a.href = url; a.download = id + ".mp4"; a.click(); }
+    } catch (e) {
+      // Tarayıcı doğrudan indirmeye izin vermezse GitHub'da aç (GitHub'a giriş yapmış olman gerekir)
+      bildir("Panelden açılamadı, GitHub'da açılıyor…"); window.open(githubLinki(v), "_blank");
+    }
+    buton.disabled = false; buton.textContent = eski; return;
+  }
+  if (islem === "duzenle") return duzenleModal(v);
+  if (islem === "kendi") return kendiVideom(v);
+}
+
+function duzenleModal(v) {
+  modalAc(`
+    <h3>✏️ ${esc(v.baslik || v.konu)}</h3>
+    ${v.durum === "onaylandi" ? `<div class="uyari">Bu video onaylanmış. Yeniden üretilince tekrar onay bekler.</div>` : ""}
+    <label>Ne yapılsın?</label>
+    <select id="dMod">
+      <option value="duzenle">Benim düzenlemelerimle yeniden üret</option>
+      <option value="yeniden_yaz">Claude senaryoyu baştan yazsın</option>
+    </select>
+    <div id="dDuzenle">
+      <label>YouTube başlığı</label><input id="dBaslik" value="${esc(v.baslik || "")}">
+      <label>Ekran yazısı (ilk 3 saniye, en fazla 6 kelime)</label><input id="dHook" value="${esc(v.hook || "")}">
+      <label>Senaryo (her satır bir cümle = bir sahne)</label><textarea id="dCumleler">${esc((v.cumleler || []).join("\n"))}</textarea>
+      <label>Görsel arama kelimeleri (İngilizce, her satır bir sahne)</label>
+      <textarea id="dGorsel" style="min-height:90px">${esc((v.gorsel_kelimeler || []).join("\n"))}</textarea>
+      <label>YouTube açıklaması</label><textarea id="dAciklama" style="min-height:70px">${esc(v.aciklama || "")}</textarea>
+    </div>
+    <div id="dYeniden" style="display:none">
+      <label>Konu (boş bırakırsan aynı konu)</label><input id="dKonu" value="${esc(v.konu)}">
+    </div>
+    <p class="ince">Yeniden üretim yaklaşık 3-5 dakika sürer. Aynı anda tek video düzenle.</p>
+    <div class="butonlar"><button onclick="modalKapat()">Vazgeç</button><button class="ana" id="dGonder">Yeniden üret</button></div>`);
+  $("#dMod").onchange = e => {
+    $("#dDuzenle").style.display = e.target.value === "duzenle" ? "" : "none";
+    $("#dYeniden").style.display = e.target.value === "yeniden_yaz" ? "" : "none";
+  };
+  $("#dGonder").onclick = async () => {
+    const satirlar = s => $(s).value.split("\n").map(x => x.trim()).filter(Boolean);
+    const mod = $("#dMod").value;
+    const veri = mod === "duzenle"
+      ? {id: v.id, mod, baslik: $("#dBaslik").value, hook: $("#dHook").value, aciklama: $("#dAciklama").value,
+         cumleler: satirlar("#dCumleler"), gorsel_kelimeler: satirlar("#dGorsel")}
+      : {id: v.id, mod, konu: $("#dKonu").value};
+    if (mod === "duzenle" && veri.gorsel_kelimeler.length && veri.gorsel_kelimeler.length !== veri.cumleler.length)
+      return bildir("Görsel kelime sayısı cümle sayısıyla aynı olmalı (ya da görsel kutusunu boş bırak).", 5000);
+    $("#dGonder").disabled = true;
+    try { await tetikle("yeniden.json", veri, `yeniden üret ${v.id}`); modalKapat();
+          bildir("🔁 Yeniden üretim başladı. 3-5 dakika sonra 'Yenile'.", 5000); }
+    catch (e) { bildir("❌ " + e.message, 6000); $("#dGonder").disabled = false; }
+  };
+}
+
+function kendiVideom(v) {
+  modalAc(`
+    <h3>📤 Kendi videonu yükle</h3>
+    <p class="alt">Önce <b>⬇️ İndir</b> ile videoyu al, CapCut gibi bir uygulamada düzenle, sonra buradan yükle.
+      YouTube'a <b>senin sürümün</b> gider (bu video henüz yüklenmediyse).</p>
+    <div class="uyari">Dikey (9:16) MP4 olmalı. Bu video daha sonra "yeniden üret" yapılırsa senin sürümün silinir.</div>
+    <label>Video dosyası</label><input type="file" id="kDosya" accept="video/mp4,video/*">
+    <div class="yukleme" id="kIlerleme" style="display:block"><i></i></div>
+    <div class="butonlar"><button onclick="modalKapat()">Vazgeç</button><button class="ana" id="kGonder">Yükle</button></div>`);
+  $("#kGonder").onclick = async () => {
+    const dosya = $("#kDosya").files[0];
+    if (!dosya) return bildir("Önce bir video seç.");
+    $("#kGonder").disabled = true;
+    try {
+      const b = await assetBul(v);
+      if (!b) throw new Error("Bu haftanın Release'i bulunamadı.");
+      if (b.asset) await gh(`/repos/${DEPO}/releases/assets/${b.asset.id}`, {method: "DELETE"});
+      await new Promise((tamam, hata) => {
+        const x = new XMLHttpRequest();
+        x.open("POST", `https://uploads.github.com/repos/${DEPO}/releases/${b.rel.id}/assets?name=${encodeURIComponent(v.id + ".mp4")}`);
+        x.setRequestHeader("Authorization", "Bearer " + TOKEN);
+        x.setRequestHeader("Content-Type", dosya.type || "video/mp4");
+        x.upload.onprogress = e => { if (e.lengthComputable) $("#kIlerleme i").style.width = (100 * e.loaded / e.total) + "%"; };
+        x.onload = () => x.status < 300 ? tamam() : hata(new Error("Yükleme hatası " + x.status + ": " + x.responseText.slice(0, 150)));
+        x.onerror = () => hata(new Error("Ağ hatası (tarayıcı yüklemeyi engellemiş olabilir)."));
+        x.send(dosya);
+      });
+      delete RELEASES[v.release];
+      modalKapat(); bildir("✅ Senin videon yüklendi. YouTube'a bu sürüm gidecek.", 5000);
+    } catch (e) { bildir("❌ " + e.message, 7000); $("#kGonder").disabled = false; }
+  };
+}
+
+// ─────────────────────────────────────────
+//  AYARLAR
+// ─────────────────────────────────────────
+async function ayarlar() {
+  $("#ana").innerHTML = `<p class="alt">Yükleniyor…</p>`;
+  const kayitli = await dosyaOku("ayarlar.json", {});
+  const a = {...VARSAYILAN_AYARLAR, ...(typeof kayitli === "object" ? kayitli : {})};
+  const secenek = (deger, liste) => liste.map(([d, y]) => `<option value="${esc(d)}" ${String(d) === String(deger) ? "selected" : ""}>${esc(y)}</option>`).join("");
+  $("#ana").innerHTML = `
+  <div class="kart"><h3>📅 Yayın planı</h3>
+    <label>Yayın saatleri (Türkiye) — günde kaç saat yazarsan o kadar video</label>
+    <div id="saatler"></div><div class="butonlar"><button id="saatEkle">+ Saat ekle</button></div>
+    <label>Güncel (trend) konu günleri — o gün son video güncel haber olur</label>
+    <div class="gunler">${GUN_ADLARI.map((g, i) => `<label><input type="checkbox" data-gun="${i}" ${a.TREND_GUNLERI.includes(i) ? "checked" : ""}>${g}</label>`).join("")}</div>
+    <label>Günlük en fazla YouTube yüklemesi (kota: en fazla 6)</label>
+    <input type="number" id="limit" min="1" max="6" value="${esc(a.GUNLUK_YUKLEME_LIMITI)}">
+  </div>
+  <div class="kart"><h3>🧠 Konular ve yapay zekâ</h3>
+    <label>Konu kategorileri (her satır bir kategori)</label><textarea id="kategoriler">${esc(a.KATEGORILER.join("\n"))}</textarea>
+    <label>Maliyet / kalite profili</label>
+    <select id="profil">${secenek(a.MALIYET_PROFILI, [["ekonomik", "Ekonomik (~4-5 $/ay)"], ["dengeli", "Dengeli (~8-9 $/ay)"], ["kalite", "Kalite (~15 $/ay)"]])}</select>
+    <label><input type="checkbox" id="dogrulama" ${a.BILGI_DOGRULAMA ? "checked" : ""}> Bilgileri internette doğrula</label>
+    <label><input type="checkbox" id="otoOnay" ${a.OTOMATIK_ONAY ? "checked" : ""}> Pazar 20:00'de reddetmediklerimi otomatik onayla</label>
+  </div>
+  <div class="kart"><h3>🎙️ Ses ve görüntü</h3>
+    <label>Ses</label><select id="ses">${secenek(a.TTS_SES, [["tr-TR-AhmetNeural", "Ahmet (erkek)"], ["tr-TR-EmelNeural", "Emel (kadın)"]])}</select>
+    <label>Konuşma hızı</label><select id="hiz">${secenek(a.TTS_HIZ, [["+0%", "Normal"], ["+5%", "+%5"], ["+10%", "+%10"], ["+15%", "+%15"], ["+20%", "+%20"]])}</select>
+    <label>Karartma: <b id="kVal">${Math.round(a.KARARTMA * 100)}%</b></label>
+    <input type="range" id="karartma" min="0" max="60" value="${Math.round(a.KARARTMA * 100)}">
+    <label><input type="checkbox" id="klip" ${a.VIDEO_KLIP_ONCELIKLI ? "checked" : ""}> Önce hareketli video klip kullan (kapalıysa fotoğraf)</label>
+  </div>
+  <div class="kart"><h3>💬 Altyazı ve ekran yazısı</h3>
+    <div class="satir"><div><label>Altyazı boyutu</label><input type="number" id="aBoyut" min="60" max="140" value="${esc(a.ALTYAZI_BOYUT)}"></div>
+      <div><label>Ekranda kelime</label><input type="number" id="aKelime" min="1" max="5" value="${esc(a.ALTYAZI_KELIME)}"></div></div>
+    <div class="satir"><div><label>Ekran yazısı boyutu</label><input type="number" id="hBoyut" min="60" max="150" value="${esc(a.HOOK_BOYUT)}"></div>
+      <div><label>Ekran yazısı süresi (sn)</label><input type="number" id="hSure" min="1" max="6" step="0.1" value="${esc(a.HOOK_SURE)}"></div></div>
+  </div>
+  <div class="butonlar"><button class="ana" id="ayarKaydet">💾 Kaydet</button></div>
+  <p class="ince">Değişiklikler bir sonraki üretimde (her Perşembe ya da "Şimdi üretimi başlat") geçerli olur.</p>`;
+  const saatCiz = liste => {
+    $("#saatler").innerHTML = liste.map((s, i) => `<div class="satir" style="margin-bottom:6px">
+      <input type="time" class="saat" value="${esc(s)}"><button data-sil="${i}" style="flex:0">✕</button></div>`).join("");
+    document.querySelectorAll("[data-sil]").forEach(b => b.onclick = () => {
+      const l = [...document.querySelectorAll(".saat")].map(x => x.value); l.splice(+b.dataset.sil, 1); saatCiz(l);
+    });
+  };
+  saatCiz(a.YAYINLANMA_SAATLERI);
+  $("#saatEkle").onclick = () => { const l = [...document.querySelectorAll(".saat")].map(x => x.value); if (l.length < 6) { l.push("18:00"); saatCiz(l); } };
+  $("#karartma").oninput = e => $("#kVal").textContent = e.target.value + "%";
+  $("#ayarKaydet").onclick = async () => {
+    const saatler = [...document.querySelectorAll(".saat")].map(x => x.value).filter(Boolean).sort();
+    if (!saatler.length) return bildir("En az bir yayın saati olmalı.");
+    const yeni = {
+      YAYINLANMA_SAATLERI: saatler,
+      TREND_GUNLERI: [...document.querySelectorAll("[data-gun]")].filter(x => x.checked).map(x => +x.dataset.gun),
+      GUNLUK_YUKLEME_LIMITI: Math.min(6, Math.max(1, +$("#limit").value || 6)),
+      KATEGORILER: $("#kategoriler").value.split("\n").map(x => x.trim()).filter(Boolean),
+      MALIYET_PROFILI: $("#profil").value, BILGI_DOGRULAMA: $("#dogrulama").checked, OTOMATIK_ONAY: $("#otoOnay").checked,
+      TTS_SES: $("#ses").value, TTS_HIZ: $("#hiz").value, KARARTMA: +$("#karartma").value / 100,
+      VIDEO_KLIP_ONCELIKLI: $("#klip").checked,
+      ALTYAZI_BOYUT: +$("#aBoyut").value, ALTYAZI_KELIME: +$("#aKelime").value,
+      HOOK_BOYUT: +$("#hBoyut").value, HOOK_SURE: +$("#hSure").value,
+    };
+    if (!yeni.KATEGORILER.length) return bildir("En az bir kategori olmalı.");
+    $("#ayarKaydet").disabled = true;
+    try { await dosyaYaz("ayarlar.json", yeni, "Panel: ayarlar güncellendi"); bildir("✅ Ayarlar kaydedildi."); }
+    catch (e) { bildir("❌ " + e.message, 6000); }
+    $("#ayarKaydet").disabled = false;
+  };
+}
+
+// ─────────────────────────────────────────
+//  İSTATİSTİK + MALİYET
+// ─────────────────────────────────────────
+async function istatistik() {
+  $("#ana").innerHTML = `<p class="alt">Yükleniyor…</p>`;
+  const [perf, maliyet] = await Promise.all([dosyaOku("performans.json", null), dosyaOku("maliyet.json", [])]);
+  const simdi = Date.now(), gun = 864e5;
+  const toplam = g => (maliyet || []).filter(k => simdi - new Date(k.zaman) < g * gun).reduce((s, k) => s + k.usd, 0);
+  const isler = {};
+  (maliyet || []).filter(k => simdi - new Date(k.zaman) < 30 * gun).forEach(k => isler[k.is] = (isler[k.is] || 0) + k.usd);
+  const enBuyukIs = Math.max(0.0001, ...Object.values(isler));
+  let html = `<div class="kart"><h3>💰 Claude maliyeti (tahmini)</h3>
+    <div class="satir"><div><div class="alt">Son 7 gün</div><b style="font-size:22px">${toplam(7).toFixed(2)} $</b></div>
+    <div><div class="alt">Son 30 gün</div><b style="font-size:22px">${toplam(30).toFixed(2)} $</b></div></div>
+    ${Object.entries(isler).sort((a, b) => b[1] - a[1]).map(([is, usd]) => `
+      <div style="margin-top:10px"><div class="satir"><span>${esc(is)}</span><span style="text-align:right">${usd.toFixed(3)} $</span></div>
+      <div class="cubuk"><i style="width:${100 * usd / enBuyukIs}%"></i></div></div>`).join("")}
+    <p class="ince">Gerçek fatura: Anthropic Console → Usage.</p></div>`;
+  if (perf && (perf.videolar || []).length) {
+    const enCok = Math.max(1, ...perf.videolar.map(v => v.izlenme));
+    html += `<div class="kart"><h3>📊 Kanal performansı</h3><p class="ince">Son güncelleme: ${esc(perf.tarih)} · ${perf.videolar.length} video</p>
+      ${perf.videolar.map(v => `<div style="margin-top:10px">
+        <div class="satir"><span style="flex:3">${esc(v.baslik)}</span><span style="text-align:right">${v.izlenme} 👁 ${v.begeni} 👍${v.izlenme_yuzdesi != null ? ` · %${v.izlenme_yuzdesi}` : ""}</span></div>
+        <div class="cubuk"><i style="width:${100 * v.izlenme / enCok}%"></i></div></div>`).join("")}</div>`;
+  } else html += `<div class="kart"><h3>📊 Kanal performansı</h3><p class="alt">Veri her Perşembe üretimde toplanır.</p></div>`;
+  $("#ana").innerHTML = html;
+}
+
+// ─────────────────────────────────────────
+//  YOUTUBE İZNİ
+// ─────────────────────────────────────────
+async function izin() {
+  $("#ana").innerHTML = `<p class="alt">Yükleniyor…</p>`;
+  const [gizli, commitler] = await Promise.all([
+    dosyaOku("client_secrets.json", null),
+    gh(`/repos/${DEPO}/commits?path=youtube_token.enc&per_page=1`).then(r => r.status === 404 ? [] : r.json()),
+  ]);
+  const c = gizli && (gizli.installed || gizli.web);
+  let durum = "⚠️ Panelden henüz yenilenmedi (şu an GitHub secret'ındaki izin kullanılıyor).";
+  if (Array.isArray(commitler) && commitler.length) {
+    const yas = Math.floor((Date.now() - new Date(commitler[0].commit.committer.date)) / 864e5);
+    const kalan = 7 - yas;
+    durum = `${kalan <= 1 ? "🔴" : kalan <= 2 ? "🟡" : "🟢"} ${yas} gün önce yenilendi — yaklaşık <b>${Math.max(kalan, 0)} gün</b> kaldı.`;
+  }
+  const link = c ? c.auth_uri + "?" + new URLSearchParams({client_id: c.client_id, redirect_uri: "http://localhost:8080/",
+    response_type: "code", scope: SCOPES.join(" "), access_type: "offline", prompt: "consent"}) : "";
+  $("#ana").innerHTML = `<div class="kart"><h3>🔑 YouTube izni</h3><p>${durum}</p>
+    <p class="alt">Google "Testing" modunda izin 7 günde biter. Bitmeden yenile:</p>
+    <ol class="alt"><li>Aşağıdaki düğmeye bas, <b>kanalın Gmail'iyle</b> izin ver (Tümünü seç → Devam).</li>
+      <li>"Bu siteye ulaşılamıyor" sayfası açılınca <b>adres çubuğundaki adresi</b> kopyala.</li>
+      <li>Buraya yapıştırıp <b>Gönder</b>'e bas. (Kod birkaç dakikada bozulur, hemen yap.)</li></ol>
+    ${link ? `<a class="btn" style="background:var(--vurgu);color:#111;border-color:var(--vurgu)" target="_blank" href="${esc(link)}">🔑 Google'da izin ver</a>` : `<div class="hata">client_secrets.json okunamadı.</div>`}
+    <label>Dönen adres</label><textarea id="donus" style="min-height:80px" placeholder="http://localhost:8080/?code=..."></textarea>
+    <div class="butonlar"><button class="ana" id="izinGonder">Gönder</button></div></div>`;
+  $("#izinGonder").onclick = async () => {
+    const d = $("#donus").value.trim();
+    if (!/code(=|%3D)/.test(d)) return bildir("Adreste 'code=' yok. Tam adresi kopyaladığından emin ol.", 5000);
+    $("#izinGonder").disabled = true;
+    try { await tetikle("yetki.json", {donus_adresi: d}, "YouTube izni yenile"); bildir("✅ Gönderildi. 1 dakika sonra 'İşler'den kontrol et.", 5000); }
+    catch (e) { bildir("❌ " + e.message, 6000); }
+    $("#izinGonder").disabled = false;
+  };
+}
+
+// ─────────────────────────────────────────
+//  İŞLER (GitHub Actions çalıştırmaları)
+// ─────────────────────────────────────────
+async function isler() {
+  const r = await gh(`/repos/${DEPO}/actions/runs?per_page=12`);
+  if (r.status === 404) { $("#ana").innerHTML = `<div class="hata">İşler okunamadı (token'a Actions: Read izni ver).</div>`; return; }
+  const veri = await r.json();
+  const simge = x => x.status !== "completed" ? "⏳" : ({success: "✅", failure: "❌", cancelled: "⏹️", skipped: "➖"}[x.conclusion] || "•");
+  $("#ana").innerHTML = `<div class="butonlar" style="margin:0 0 12px"><button id="islerYenile">↻ Yenile</button></div>` +
+    (veri.workflow_runs || []).map(x => `<div class="kart">
+      <div>${simge(x)} <b>${esc(x.name)}</b></div>
+      <div class="alt">${new Date(x.created_at).toLocaleString("tr-TR")} · ${esc(x.display_title).slice(0, 80)}</div>
+      <a class="ince" target="_blank" href="${esc(x.html_url)}">Ayrıntı</a></div>`).join("");
+  $("#islerYenile").onclick = isler;
+}
+
+// ─────────────────────────────────────────
+//  BAŞLAT
+// ─────────────────────────────────────────
+const SAYFALAR = {videolar, ayarlar, istatistik, izin, isler};
+async function sekmeAc(s) {
+  SEKME = s;
+  document.querySelectorAll("#sekmeler button").forEach(b => b.classList.toggle("aktif", b.dataset.s === s));
+  try { await SAYFALAR[s](); }
+  catch (e) {
+    $("#ana").innerHTML = `<div class="hata">${esc(e.message)}</div>
+      <div class="butonlar"><button onclick="localStorage.removeItem('ytb_token');location.reload()">Token'ı değiştir</button></div>`;
+  }
+}
+document.querySelectorAll("#sekmeler button").forEach(b => b.onclick = () => sekmeAc(b.dataset.s));
+async function basla() {
+  if (!TOKEN) return kurulumEkrani();
+  $("#sekmeler").style.display = "";
+  try { const u = await (await gh("/user")).json(); $("#kullanici").textContent = u.login || ""; } catch (e) {}
+  sekmeAc("videolar");
+}
+basla();
+</script>
+</body>
+</html>
