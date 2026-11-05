@@ -87,7 +87,7 @@ const VARSAYILAN_AYARLAR = {
     "insan beyninin karanlık sırları", "tarihin gizli kalmış olayları",
     "hayvanların inanılmaz ve bilinmeyen yetenekleri", "teknolojinin gelecekte yapacağı şaşırtıcı şeyler",
     "dünyanın en tuhaf ve sıra dışı yerleri"],
-  MALIYET_PROFILI: "dengeli", OTOMATIK_ONAY: true, BILGI_DOGRULAMA: true, GUNLUK_YUKLEME_LIMITI: 6,
+  MALIYET_PROFILI: "dengeli", ONAY_MODU: "otomatik", OTOMATIK_ONAY: true, BILGI_DOGRULAMA: true, GUNLUK_YUKLEME_LIMITI: 6,
   TTS_SES: "tr-TR-AhmetNeural", TTS_HIZ: "+10%", SES_MOTORU: "edge", ELEVENLABS_SES: "75SIZa3vvET95PHhf1yD", KARARTMA: 0.35, VIDEO_KLIP_ONCELIKLI: true,
   ALTYAZI_BOYUT: 96, ALTYAZI_KELIME: 3, HOOK_SURE: 2.8, HOOK_BOYUT: 100,
 };
@@ -231,6 +231,11 @@ function videoKarti(v, no) {
   if (v.release) b += `<button data-islem="izle" data-id="${id}">▶️ İzle</button>
     <button data-islem="indir" data-id="${id}">⬇️ İndir</button>`;
   if (v.youtube_id) b += `<a class="btn" target="_blank" href="https://youtube.com/shorts/${esc(v.youtube_id)}">📺 YouTube</a>`;
+  const gelecekte = new Date(String(v.yayinlanma).replace(" ", "T") + ":00+03:00") > new Date();
+  if (["video_hazir", "onaylandi", "reddedildi"].includes(v.durum) || (v.durum === "yuklendi" && gelecekte && !v.hemen))
+    b += `<button data-islem="hemen" data-id="${id}">🚀 Hemen yayınla</button>`;
+  if (v.durum === "yuklendi" && gelecekte)
+    b += `<button data-islem="sil" data-id="${id}">🗑️ YouTube'dan sil</button>`;
   if (!["yuklendi", "bekliyor", "seslendirildi"].includes(v.durum)) b += `
     <button data-islem="duzenle" data-id="${id}">✏️ Düzenle / yeniden üret</button>
     <button data-islem="kendi" data-id="${id}">📤 Kendi videomu yükle</button>`;
@@ -301,6 +306,20 @@ async function videoIslem(islem, id, buton) {
       bildir("Panelden açılamadı, GitHub'da açılıyor…"); window.open(githubLinki(v), "_blank");
     }
     buton.disabled = false; buton.textContent = eski; return;
+  }
+  if (islem === "hemen" || islem === "sil") {
+    const soru = islem === "hemen"
+      ? "Bu video yayın saatini beklemeden HEMEN yayınlansın mı?"
+      : "Bu video YouTube'dan silinsin mi? (Henüz yayınlanmadı; geri alınamaz.)";
+    if (!confirm(soru)) return;
+    buton.disabled = true;
+    try {
+      await tetikle("onay.json", islem === "hemen" ? {hemen: id, onayla: "", reddet: "", kontrol: false}
+                                                   : {hemen: "", onayla: "", reddet: id, kontrol: false},
+                    islem === "hemen" ? `hemen yayınla ${id}` : `YouTube'dan sil ${id}`);
+      bildir(islem === "hemen" ? "🚀 Gönderildi. 2-3 dakika içinde yayında." : "🗑️ Gönderildi. 2-3 dakika içinde silinir.", 5000);
+    } catch (e) { bildir("❌ " + e.message, 6000); }
+    buton.disabled = false; return;
   }
   if (islem === "duzenle") return duzenleModal(v);
   if (islem === "kendi") return kendiVideom(v);
@@ -403,7 +422,9 @@ async function ayarlar() {
     <label>Maliyet / kalite profili</label>
     <select id="profil">${secenek(a.MALIYET_PROFILI, [["ekonomik", "Ekonomik (~4-5 $/ay)"], ["dengeli", "Dengeli (~8-9 $/ay)"], ["kalite", "Kalite (~15 $/ay)"]])}</select>
     <label><input type="checkbox" id="dogrulama" ${a.BILGI_DOGRULAMA ? "checked" : ""}> Bilgileri internette doğrula</label>
-    <label><input type="checkbox" id="otoOnay" ${a.OTOMATIK_ONAY ? "checked" : ""}> Pazar 20:00'de reddetmediklerimi otomatik onayla</label>
+    <label>Onay modu</label>
+    <select id="onayModu">${secenek(a.ONAY_MODU, [["otomatik", "Tam otomatik — üretilir üretilmez yüklenir"], ["pazar", "Ben onaylarım, Pazar 20:00'de kalanlar otomatik"], ["elle", "Sadece ben onaylarım"]])}</select>
+    <label><input type="checkbox" id="otoOnay" ${a.OTOMATIK_ONAY ? "checked" : ""}> (Pazar modunda) Pazar 20:00'de reddetmediklerimi otomatik onayla</label>
   </div>
   <div class="kart"><h3>🎙️ Ses ve görüntü</h3>
     <label>Ses motoru</label><select id="motor">${secenek(a.SES_MOTORU, [["edge", "Edge TTS (ücretsiz)"], ["elevenlabs", "ElevenLabs (daha doğal, ücretli)"]])}</select>
@@ -442,6 +463,7 @@ async function ayarlar() {
       GUNLUK_YUKLEME_LIMITI: Math.min(6, Math.max(1, +$("#limit").value || 6)),
       KATEGORILER: $("#kategoriler").value.split("\n").map(x => x.trim()).filter(Boolean),
       MALIYET_PROFILI: $("#profil").value, BILGI_DOGRULAMA: $("#dogrulama").checked, OTOMATIK_ONAY: $("#otoOnay").checked,
+      ONAY_MODU: $("#onayModu").value,
       TTS_SES: $("#ses").value, TTS_HIZ: $("#hiz").value,
       SES_MOTORU: $("#motor").value, ELEVENLABS_SES: $("#elSes").value.trim() || VARSAYILAN_AYARLAR.ELEVENLABS_SES, KARARTMA: +$("#karartma").value / 100,
       VIDEO_KLIP_ONCELIKLI: $("#klip").checked,
