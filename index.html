@@ -90,6 +90,7 @@ const VARSAYILAN_AYARLAR = {
   MALIYET_PROFILI: "dengeli", ONAY_MODU: "otomatik", OTOMATIK_ONAY: true, BILGI_DOGRULAMA: true, GUNLUK_YUKLEME_LIMITI: 6,
   TTS_SES: "tr-TR-AhmetNeural", TTS_HIZ: "+10%", SES_MOTORU: "edge", ELEVENLABS_SES: "75SIZa3vvET95PHhf1yD", KARARTMA: 0.35, VIDEO_KLIP_ONCELIKLI: true,
   ALTYAZI_BOYUT: 96, ALTYAZI_KELIME: 3, HOOK_SURE: 2.8, HOOK_BOYUT: 100,
+  GORSEL_CESITLILIK: true, SERI_ETIKETI: true, FON_MUZIGI: true, MUZIK_SESI: 0.16, OTOMATIK_YORUM: true,
 };
 const GUN_ADLARI = ["Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz"];
 const DURUM = {
@@ -442,6 +443,14 @@ async function ayarlar() {
     <div class="satir"><div><label>Ekran yazısı boyutu</label><input type="number" id="hBoyut" min="60" max="150" value="${esc(a.HOOK_BOYUT)}"></div>
       <div><label>Ekran yazısı süresi (sn)</label><input type="number" id="hSure" min="1" max="6" step="0.1" value="${esc(a.HOOK_SURE)}"></div></div>
   </div>
+  <div class="kart"><h3>🎬 Çeşitlilik ve kanal kimliği</h3>
+    <label><input type="checkbox" id="cesit" ${a.GORSEL_CESITLILIK ? "checked" : ""}> Her videoda farklı stil (vurgu rengi, altyazı yeri, karartma, geçiş). Açıkken karartma ve kelime sayısı videoya göre değişir.</label>
+    <label><input type="checkbox" id="seriEt" ${a.SERI_ETIKETI ? "checked" : ""}> Videonun üstünde seri adı ve bölüm numarası</label>
+    <label><input type="checkbox" id="muzik" ${a.FON_MUZIGI ? "checked" : ""}> Fon müziği + efektler</label>
+    <label>Müzik seviyesi: <b id="mVal">${Math.round(a.MUZIK_SESI * 100)}%</b></label>
+    <input type="range" id="muzikSes" min="4" max="40" value="${Math.round(a.MUZIK_SESI * 100)}">
+    <label><input type="checkbox" id="yorum" ${a.OTOMATIK_YORUM ? "checked" : ""}> Yayından sonra kanal hesabıyla otomatik yorum at</label>
+  </div>
   <div class="butonlar"><button class="ana" id="ayarKaydet">💾 Kaydet</button></div>
   <p class="ince">Değişiklikler bir sonraki üretimde (her Perşembe ya da "Şimdi üretimi başlat") geçerli olur.</p>`;
   const saatCiz = liste => {
@@ -454,6 +463,7 @@ async function ayarlar() {
   saatCiz(a.YAYINLANMA_SAATLERI);
   $("#saatEkle").onclick = () => { const l = [...document.querySelectorAll(".saat")].map(x => x.value); if (l.length < 6) { l.push("18:00"); saatCiz(l); } };
   $("#karartma").oninput = e => $("#kVal").textContent = e.target.value + "%";
+  $("#muzikSes").oninput = e => $("#mVal").textContent = e.target.value + "%";
   $("#ayarKaydet").onclick = async () => {
     const saatler = [...document.querySelectorAll(".saat")].map(x => x.value).filter(Boolean).sort();
     if (!saatler.length) return bildir("En az bir yayın saati olmalı.");
@@ -469,6 +479,8 @@ async function ayarlar() {
       VIDEO_KLIP_ONCELIKLI: $("#klip").checked,
       ALTYAZI_BOYUT: +$("#aBoyut").value, ALTYAZI_KELIME: +$("#aKelime").value,
       HOOK_BOYUT: +$("#hBoyut").value, HOOK_SURE: +$("#hSure").value,
+      GORSEL_CESITLILIK: $("#cesit").checked, SERI_ETIKETI: $("#seriEt").checked, FON_MUZIGI: $("#muzik").checked,
+      MUZIK_SESI: +$("#muzikSes").value / 100, OTOMATIK_YORUM: $("#yorum").checked,
     };
     if (!yeni.KATEGORILER.length) return bildir("En az bir kategori olmalı.");
     $("#ayarKaydet").disabled = true;
