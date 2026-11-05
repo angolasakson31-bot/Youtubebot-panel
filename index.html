@@ -485,14 +485,14 @@ async function istatistik() {
 // ─────────────────────────────────────────
 async function izin() {
   $("#ana").innerHTML = `<p class="alt">Yükleniyor…</p>`;
-  const [gizli, commitler] = await Promise.all([
+  const [gizli, izinTarihi] = await Promise.all([
     dosyaOku("client_secrets.json", null),
-    gh(`/repos/${DEPO}/commits?path=youtube_token.enc&per_page=1`).then(r => r.status === 404 ? [] : r.json()),
+    dosyaOku("izin_tarihi.json", null),
   ]);
   const c = gizli && (gizli.installed || gizli.web);
-  let durum = "⚠️ Panelden henüz yenilenmedi (şu an GitHub secret'ındaki izin kullanılıyor).";
-  if (Array.isArray(commitler) && commitler.length) {
-    const yas = Math.floor((Date.now() - new Date(commitler[0].commit.committer.date)) / 864e5);
+  let durum = "⚠️ İznin alındığı tarih bilinmiyor.";
+  if (izinTarihi && izinTarihi.tarih) {
+    const yas = Math.floor((Date.now() - new Date(izinTarihi.tarih)) / 864e5);
     const kalan = 7 - yas;
     durum = `${kalan <= 1 ? "🔴" : kalan <= 2 ? "🟡" : "🟢"} ${yas} gün önce yenilendi — yaklaşık <b>${Math.max(kalan, 0)} gün</b> kaldı.`;
   }
