@@ -88,7 +88,7 @@ const VARSAYILAN_AYARLAR = {
     "hayvanların inanılmaz ve bilinmeyen yetenekleri", "teknolojinin gelecekte yapacağı şaşırtıcı şeyler",
     "dünyanın en tuhaf ve sıra dışı yerleri"],
   MALIYET_PROFILI: "dengeli", OTOMATIK_ONAY: true, BILGI_DOGRULAMA: true, GUNLUK_YUKLEME_LIMITI: 6,
-  TTS_SES: "tr-TR-AhmetNeural", TTS_HIZ: "+10%", KARARTMA: 0.35, VIDEO_KLIP_ONCELIKLI: true,
+  TTS_SES: "tr-TR-AhmetNeural", TTS_HIZ: "+10%", SES_MOTORU: "edge", ELEVENLABS_SES: "75SIZa3vvET95PHhf1yD", KARARTMA: 0.35, VIDEO_KLIP_ONCELIKLI: true,
   ALTYAZI_BOYUT: 96, ALTYAZI_KELIME: 3, HOOK_SURE: 2.8, HOOK_BOYUT: 100,
 };
 const GUN_ADLARI = ["Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz"];
@@ -406,7 +406,10 @@ async function ayarlar() {
     <label><input type="checkbox" id="otoOnay" ${a.OTOMATIK_ONAY ? "checked" : ""}> Pazar 20:00'de reddetmediklerimi otomatik onayla</label>
   </div>
   <div class="kart"><h3>🎙️ Ses ve görüntü</h3>
-    <label>Ses</label><select id="ses">${secenek(a.TTS_SES, [["tr-TR-AhmetNeural", "Ahmet (erkek)"], ["tr-TR-EmelNeural", "Emel (kadın)"]])}</select>
+    <label>Ses motoru</label><select id="motor">${secenek(a.SES_MOTORU, [["edge", "Edge TTS (ücretsiz)"], ["elevenlabs", "ElevenLabs (daha doğal, ücretli)"]])}</select>
+    <label>ElevenLabs ses kimliği (Voice ID)</label><input id="elSes" value="${esc(a.ELEVENLABS_SES)}">
+    <p class="ince">ElevenLabs hata verir ya da kotası biterse o video otomatik Edge sesiyle üretilir.</p>
+    <label>Edge sesi</label><select id="ses">${secenek(a.TTS_SES, [["tr-TR-AhmetNeural", "Ahmet (erkek)"], ["tr-TR-EmelNeural", "Emel (kadın)"]])}</select>
     <label>Konuşma hızı</label><select id="hiz">${secenek(a.TTS_HIZ, [["+0%", "Normal"], ["+5%", "+%5"], ["+10%", "+%10"], ["+15%", "+%15"], ["+20%", "+%20"]])}</select>
     <label>Karartma: <b id="kVal">${Math.round(a.KARARTMA * 100)}%</b></label>
     <input type="range" id="karartma" min="0" max="60" value="${Math.round(a.KARARTMA * 100)}">
@@ -439,7 +442,8 @@ async function ayarlar() {
       GUNLUK_YUKLEME_LIMITI: Math.min(6, Math.max(1, +$("#limit").value || 6)),
       KATEGORILER: $("#kategoriler").value.split("\n").map(x => x.trim()).filter(Boolean),
       MALIYET_PROFILI: $("#profil").value, BILGI_DOGRULAMA: $("#dogrulama").checked, OTOMATIK_ONAY: $("#otoOnay").checked,
-      TTS_SES: $("#ses").value, TTS_HIZ: $("#hiz").value, KARARTMA: +$("#karartma").value / 100,
+      TTS_SES: $("#ses").value, TTS_HIZ: $("#hiz").value,
+      SES_MOTORU: $("#motor").value, ELEVENLABS_SES: $("#elSes").value.trim() || VARSAYILAN_AYARLAR.ELEVENLABS_SES, KARARTMA: +$("#karartma").value / 100,
       VIDEO_KLIP_ONCELIKLI: $("#klip").checked,
       ALTYAZI_BOYUT: +$("#aBoyut").value, ALTYAZI_KELIME: +$("#aKelime").value,
       HOOK_BOYUT: +$("#hBoyut").value, HOOK_SURE: +$("#hSure").value,
