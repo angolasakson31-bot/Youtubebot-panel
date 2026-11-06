@@ -602,6 +602,8 @@ async function ayarlar() {
       <label>Yapay zekâ görsel modeli</label><select id="gorselEkModel"></select>
       <div class="satir"><div><label>Boyut</label><input id="gorselEkBoyut" value="${esc(a.GORSEL_EK_BOYUT)}"></div>
         <div><label>Görsel başına $</label><input type="number" step="0.01" id="gorselEkFiyat" value="${esc(a.GORSEL_EK_FIYAT)}"></div></div>
+      <p class="ince">Liste boşsa: önce 🤖 Yapay zekâ kartında görsel üretebilen bir sağlayıcı ekle (ör. OpenAI), anahtarını 🔑 kartına gir,
+        İşler → 🔑 Anahtar testi yap → sayfayı yenile. O sağlayıcının görsel modelleri burada kendiliğinden çıkar.</p>
       <p class="ince">Yapay zekâ görselini sona koyarsan sadece stok bulunamayınca üretilir (ucuz); başa koyarsan her sahne üretilir (video başına ~6 görsel).</p>
     </div>
   </div>
@@ -690,9 +692,15 @@ async function ayarlar() {
     document.querySelectorAll("[data-gorev]").forEach(x => gorevSecim[x.dataset.gorev] = x.value);
     const ekler = liste.flatMap(s => s.modeller.map(m => [`ek${s.yuva}:${m}`, `${s.ad} · ${m}`]));
     const secenekler = [["", "Varsayılan (maliyet profili)"], ...claudeListe, ...ekler];
-    const ekSec = (id, deger) => { const el = $(id); const v = el.value || deger || "";
-      el.innerHTML = [["", "— seç —"], ...ekler].map(([k, t]) => `<option value="${esc(k)}" ${k === v ? "selected" : ""}>${esc(t)}</option>`).join(""); };
-    ekSec("#sesEkModel", a.SES_EK_MODEL); ekSec("#gorselEkModel", a.GORSEL_EK_MODEL);
+    // Ses / görsel listesi: elle yazılan modeller + sağlayıcıda bulunan, işe uygun adlı modeller (otomatik)
+    const uygunlar = desen => liste.flatMap(sg => ((bulunan && bulunan.ek && bulunan.ek[sg.yuva]) || [])
+      .filter(m => desen.test(m) && !sg.modeller.includes(m)).map(m => [`ek${sg.yuva}:${m}`, `${sg.ad} · ${m}`]));
+    const ekSec = (id, deger, desen) => { const el = $(id); const v = el.value || deger || "";
+      const l = [["", "— seç —"], ...uygunlar(desen), ...ekler];
+      if (v && !l.some(([k]) => k === v)) l.push([v, v]);
+      el.innerHTML = l.map(([k, t]) => `<option value="${esc(k)}" ${k === v ? "selected" : ""}>${esc(t)}</option>`).join(""); };
+    ekSec("#sesEkModel", a.SES_EK_MODEL, /tts|speech|audio|voice|sonic/i);
+    ekSec("#gorselEkModel", a.GORSEL_EK_MODEL, /image|dall|imagen|flux|diffusion|sdxl|recraft|ideogram/i);
     $("#gorevler").innerHTML = Object.entries(GOREVLER).map(([k, ad]) => `<label>${esc(ad)}</label>
       <select data-gorev="${k}">${secenekler.map(([v, t]) => `<option value="${esc(v)}" ${(gorevSecim[k] || "") === v ? "selected" : ""}>${esc(t)}</option>`).join("")}</select>`).join("");
   };
