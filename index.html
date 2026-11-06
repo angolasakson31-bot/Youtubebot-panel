@@ -94,7 +94,7 @@ const VARSAYILAN_AYARLAR = {
   TTS_SES: "tr-TR-AhmetNeural", TTS_HIZ: "+10%", SES_MOTORU: "edge", ELEVENLABS_SES: "75SIZa3vvET95PHhf1yD", KARARTMA: 0.35, VIDEO_KLIP_ONCELIKLI: true,
   ALTYAZI_BOYUT: 96, ALTYAZI_KELIME: 3, HOOK_SURE: 2.8, HOOK_BOYUT: 100,
   GORSEL_CESITLILIK: true, SERI_ETIKETI: true, FON_MUZIGI: true, MUZIK_SESI: 0.16, OTOMATIK_YORUM: true,
-  IZIN_SURESIZ: false,
+  IZIN_SURESIZ: false, KONU_NOTU: "", OZEL_KONULAR: [],
 };
 const GUN_ADLARI = ["Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz"];
 const DURUM = {
@@ -433,6 +433,10 @@ async function ayarlar() {
   </div>
   <div class="kart"><h3>🧠 Konular ve yapay zekâ</h3>
     <label>Konu kategorileri (her satır bir kategori)</label><textarea id="kategoriler">${esc(a.KATEGORILER.join("\n"))}</textarea>
+    <label>📝 Konu talimatın (isteğe bağlı — en öncelikli kural olur)</label>
+    <textarea id="konuNotu" placeholder="ör. Uzay ve antik uygarlıklara ağırlık ver, hastalık konularından kaçın">${esc(a.KONU_NOTU || "")}</textarea>
+    <label>🎯 Yapılmasını istediğin konular (her satır bir konu — sıradaki Perşembe üretiminde önce bunlar yapılır, yapılanlar listeden silinir)</label>
+    <textarea id="ozelKonular" placeholder="ör. Çatalhöyük'te 9000 yıllık evler neden kapısızdı?">${esc((a.OZEL_KONULAR || []).join("\n"))}</textarea>
     <label>Maliyet / kalite profili</label>
     <select id="profil">${secenek(a.MALIYET_PROFILI, [["ekonomik", "Ekonomik (~4-5 $/ay)"], ["dengeli", "Dengeli (~8-9 $/ay)"], ["kalite", "Kalite (~15 $/ay)"]])}</select>
     <label><input type="checkbox" id="dogrulama" ${a.BILGI_DOGRULAMA ? "checked" : ""}> Bilgileri internette doğrula</label>
@@ -488,6 +492,8 @@ async function ayarlar() {
       TREND_GUNLERI: [...document.querySelectorAll("[data-gun]")].filter(x => x.checked).map(x => +x.dataset.gun),
       GUNLUK_YUKLEME_LIMITI: Math.min(6, Math.max(1, +$("#limit").value || 6)),
       KATEGORILER: $("#kategoriler").value.split("\n").map(x => x.trim()).filter(Boolean),
+      KONU_NOTU: $("#konuNotu").value.trim(),
+      OZEL_KONULAR: $("#ozelKonular").value.split("\n").map(x => x.trim()).filter(Boolean),
       MALIYET_PROFILI: $("#profil").value, BILGI_DOGRULAMA: $("#dogrulama").checked, OTOMATIK_ONAY: $("#otoOnay").checked,
       ONAY_MODU: $("#onayModu").value,
       TTS_SES: $("#ses").value, TTS_HIZ: $("#hiz").value,
