@@ -94,7 +94,21 @@ const VARSAYILAN_AYARLAR = {
   TTS_SES: "tr-TR-AhmetNeural", TTS_HIZ: "+10%", SES_MOTORU: "edge", ELEVENLABS_SES: "75SIZa3vvET95PHhf1yD", KARARTMA: 0.35, VIDEO_KLIP_ONCELIKLI: true,
   ALTYAZI_BOYUT: 96, ALTYAZI_KELIME: 3, HOOK_SURE: 2.8, HOOK_BOYUT: 100,
   GORSEL_CESITLILIK: true, SERI_ETIKETI: true, FON_MUZIGI: true, MUZIK_SESI: 0.16, OTOMATIK_YORUM: true,
-  IZIN_SURESIZ: false, KONU_NOTU: "", OZEL_KONULAR: [],
+  IZIN_SURESIZ: false, KONU_NOTU: "", OZEL_KONULAR: [], EK_SAGLAYICILAR: [], GOREV_MODELLERI: {},
+};
+// ayarlar.py GOREVLER ile aynı
+const GOREVLER = {
+  guncel_konular: "Güncel konu araması (internet araması ister)", evergreen_konular: "Evergreen konu üretimi",
+  senaryo: "Senaryo yazımı", hook_secimi: "Açılış (hook) seçimi", dogrulama: "Bilgi doğrulama (internet araması ister)",
+  detaylar: "Başlık / açıklama / görsel kelimeler", seri_yorum: "Seri + yorum (eski videolar)", strateji: "Haftalık öğrenme analizi",
+};
+const CLAUDE_MODELLERI = [["claude-opus-5-5", "Claude Opus 5.5 (en iyi, pahalı)"], ["claude-sonnet-5-5", "Claude Sonnet 5.5 (orta)"],
+                          ["claude-haiku-5-5", "Claude Haiku 5.5 (en ucuz)"]];
+const HAZIR_SAGLAYICILAR = {
+  "": ["Diğer (OpenAI uyumlu)", ""], deepseek: ["DeepSeek", "https://api.deepseek.com/v1"],
+  gemini: ["Google Gemini", "https://generativelanguage.googleapis.com/v1beta/openai"],
+  openrouter: ["OpenRouter", "https://openrouter.ai/api/v1"], groq: ["Groq", "https://api.groq.com/openai/v1"],
+  mistral: ["Mistral", "https://api.mistral.ai/v1"], openai: ["OpenAI", "https://api.openai.com/v1"],
 };
 const GUN_ADLARI = ["Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz"];
 const DURUM = {
@@ -204,23 +218,71 @@ async function assetBul(v) {
   return rel ? {rel, asset: (rel.assets || []).find(a => a.name === v.id + ".mp4")} : null;
 }
 
+const AY_ADLARI = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
+function yayinZamani(v) { return new Date(String(v.yayinlanma).replace(" ", "T") + ":00+03:00"); }
+function zamanYazi(v) {
+  const d = yayinZamani(v), fark = (d - Date.now()) / 864e5;
+  const goreli = fark > 0 ? (fark < 1 ? `${Math.max(1, Math.round(fark * 24))} saat sonra` : `${Math.round(fark)} gün sonra`)
+                          : (fark > -1 ? "bugün" : `${Math.round(-fark)} gün önce`);
+  return `${esc(v.gun)} ${d.getDate()} ${AY_ADLARI[d.getMonth()]} · <b>${esc(v.saat)}</b> <span class="alt">(${goreli})</span>`;
+}
+function videoGrubu(v) {
+  if (v.durum === "yuklendi") return (v.hemen || yayinZamani(v) <= new Date()) ? "yayinda" : "zamanli";
+  return {onaylandi: "sirada", video_hazir: "onay", reddedildi: "red"}[v.durum] || "uretim";
+}
+const GRUP = {
+  yayinda: ["✅ Yayında", "onay"],
+  zamanli: ["⏰ YouTube'a yüklendi (gizli) — saati gelince kendiliğinden yayınlanacak", "yuk"],
+  sirada:  ["📤 Hazır — YouTube'a yüklenecek (her gün 11:07), sonra saatinde yayınlanacak", ""],
+  onay:    ["👀 Onayını bekliyor", "hazir"],
+  uretim:  ["🎬 Üretilecek (Perşembe üretiminde)", ""],
+  red:     ["❌ Reddedildi", "red"],
+};
+let VIDEO_FILTRE = (() => { try { return localStorage.getItem("ytb_filtre") || "sirada"; } catch (e) { return "sirada"; } })();
+
 async function videolar() {
   $("#ana").innerHTML = `<p class="alt">Yükleniyor…</p>`;
   PLAN = await dosyaOku("haftalik_plan.json", []);
-  const haftalar = [...new Set(PLAN.map(v => v.hafta))].sort().reverse();
-  if (!haftalar.length) { $("#ana").innerHTML = `<div class="kart">Henüz video yok.</div>`; return; }
-  let html = `<div class="butonlar" style="margin:0 0 12px"><button id="yenile">↻ Yenile</button>
-    <button id="uretBaslat">▶️ Şimdi üretimi başlat</button></div>`;
-  for (const h of haftalar) {
-    const vs = PLAN.filter(v => v.hafta === h);
-    const bekleyen = vs.filter(v => v.durum === "video_hazir").length;
-    html += `<h2 style="font-size:16px;margin:18px 0 8px">📅 ${esc(h)} haftası
-      <span class="alt">(${vs.length} video, ${bekleyen} onay bekliyor)</span></h2>`;
-    if (bekleyen) html += `<div class="butonlar" style="margin:0 0 10px">
-      <button data-hepsi="${esc(h)}">✅ Bu haftanın hepsini onayla</button></div>`;
-    vs.forEach((v, i) => html += videoKarti(v, i + 1));
+  if (!PLAN.length) { $("#ana").innerHTML = `<div class="kart">Henüz video yok.</div>`; return; }
+  const say = g => PLAN.filter(v => videoGrubu(v) === g).length;
+  let html = `<div class="kart"><div class="satir" style="text-align:center">
+      <div><b style="font-size:22px">${say("yayinda")}</b><div class="alt">✅ yayında</div></div>
+      <div><b style="font-size:22px">${say("zamanli")}</b><div class="alt">⏰ YouTube'da bekliyor</div></div>
+      <div><b style="font-size:22px">${say("sirada") + say("onay")}</b><div class="alt">📤 yüklenecek</div></div>
+      <div><b style="font-size:22px">${say("uretim")}</b><div class="alt">🎬 üretilecek</div></div></div>
+    <details style="margin-top:8px"><summary class="alt">ℹ️ Bir video nasıl yayınlanır?</summary><ol class="alt">
+      <li><b>Perşembe</b>: konu → senaryo → ses → video üretilir, panelde hemen <b>▶️ İzle</b> ile görünür.</li>
+      <li>Onay modu "otomatik" ise hemen onaylanır ve YouTube'a <b>gizli + zamanlanmış</b> olarak yüklenir (kota dolarsa ertesi gün 11:07).</li>
+      <li>Yayın saati gelince YouTube videoyu <b>kendiliğinden herkese açar</b>. O ana kadar başlığını, saatini değiştirebilir, silebilir ya da hemen yayınlayabilirsin.</li>
+      <li>YouTube'a gitmeden önce bakmak istersen Ayarlar → Onay modu → "Pazar" ya da "Elle".</li></ol></details></div>
+    <nav class="filtre" style="display:flex;gap:6px;flex-wrap:wrap;margin:0 0 12px">
+      ${[["sirada", "⏭️ Sıradakiler"], ["yayinda", "✅ Yayınlananlar"], ["hepsi", "🗂️ Haftalara göre"]].map(([k, ad]) =>
+        `<button data-filtre="${k}" class="${VIDEO_FILTRE === k ? "aktif ana" : ""}">${ad}</button>`).join("")}
+      <button id="yenile">↻</button><button id="uretBaslat">▶️ Üretimi başlat</button></nav>`;
+  if (VIDEO_FILTRE === "hepsi") {
+    const haftalar = [...new Set(PLAN.map(v => v.hafta))].sort().reverse();
+    for (const h of haftalar) {
+      const vs = PLAN.filter(v => v.hafta === h).sort((a, b) => a.yayinlanma.localeCompare(b.yayinlanma));
+      const bekleyen = vs.filter(v => v.durum === "video_hazir").length;
+      html += `<h2 style="font-size:16px;margin:18px 0 8px">📅 ${esc(h)} haftası <span class="alt">(${vs.length} video)</span></h2>`;
+      if (bekleyen) html += `<div class="butonlar" style="margin:0 0 10px"><button data-hepsi="${esc(h)}">✅ Bu haftanın ${bekleyen} videosunu onayla</button></div>`;
+      vs.forEach(v => html += videoKarti(v));
+    }
+  } else {
+    const liste = VIDEO_FILTRE === "yayinda"
+      ? PLAN.filter(v => videoGrubu(v) === "yayinda").sort((a, b) => b.yayinlanma.localeCompare(a.yayinlanma))
+      : PLAN.filter(v => !["yayinda", "red"].includes(videoGrubu(v))).sort((a, b) => a.yayinlanma.localeCompare(b.yayinlanma));
+    if (!liste.length) html += `<div class="kart alt">Burada video yok.</div>`;
+    let gun = "";
+    for (const v of liste) {
+      if (v.tarih !== gun) { gun = v.tarih; html += `<h2 style="font-size:15px;margin:16px 0 6px">${esc(v.gun)} · ${esc(v.tarih)}</h2>`; }
+      html += videoKarti(v);
+    }
   }
   $("#ana").innerHTML = html;
+  document.querySelectorAll("[data-filtre]").forEach(b => b.onclick = () => {
+    VIDEO_FILTRE = b.dataset.filtre; try { localStorage.setItem("ytb_filtre", VIDEO_FILTRE); } catch (e) {} videolar();
+  });
   $("#yenile").onclick = () => { RELEASES = {}; videolar(); };
   $("#uretBaslat").onclick = async () => {
     if (!confirm("Bekleyen konular için üretim başlatılsın mı? (Yeni hafta yoksa sadece bekleyenler üretilir.)")) return;
@@ -234,8 +296,9 @@ async function videolar() {
   kararCubugu();
 }
 
-function videoKarti(v, no) {
-  const [durumYazi, durumSinif] = DURUM[v.durum] || [v.durum, ""];
+function videoKarti(v) {
+  const grup = videoGrubu(v);
+  const [durumYazi, durumSinif] = GRUP[grup];
   const karar = KARARLAR[v.id];
   const id = esc(v.id);
   let b = "";
@@ -245,22 +308,24 @@ function videoKarti(v, no) {
   if (v.release) b += `<button data-islem="izle" data-id="${id}">▶️ İzle</button>
     <button data-islem="indir" data-id="${id}">⬇️ İndir</button>`;
   if (v.youtube_id) b += `<a class="btn" target="_blank" href="https://youtube.com/shorts/${esc(v.youtube_id)}">📺 YouTube</a>`;
-  const gelecekte = new Date(String(v.yayinlanma).replace(" ", "T") + ":00+03:00") > new Date();
-  if (["video_hazir", "onaylandi", "reddedildi"].includes(v.durum) || (v.durum === "yuklendi" && gelecekte && !v.hemen))
+  if (grup !== "red") b += `<button data-islem="bilgi" data-id="${id}">✏️ Başlık / saat${v.durum === "bekliyor" ? " / konu" : ""}</button>`;
+  if (["onay", "sirada", "zamanli"].includes(grup) && !v.hemen)
     b += `<button data-islem="hemen" data-id="${id}">🚀 Hemen yayınla</button>`;
-  if (v.durum === "yuklendi" && gelecekte)
-    b += `<button data-islem="sil" data-id="${id}">🗑️ YouTube'dan sil</button>`;
+  if (grup === "zamanli") b += `<button data-islem="sil" data-id="${id}">🗑️ YouTube'dan sil</button>`;
   if (!["yuklendi", "bekliyor", "seslendirildi"].includes(v.durum)) b += `
-    <button data-islem="duzenle" data-id="${id}">✏️ Düzenle / yeniden üret</button>
+    <button data-islem="duzenle" data-id="${id}">🔁 Senaryo / yeniden üret</button>
     <button data-islem="kendi" data-id="${id}">📤 Kendi videomu yükle</button>`;
   const cumleler = (v.cumleler || []).map(c => `<p>${esc(c)}</p>`).join("");
   const duzeltme = (v.dogrulama_duzeltmeleri || []).length;
   return `<div class="kart" id="k_${id}">
-    <div class="alt">${no}. ${esc(v.gun)} ${esc(v.saat)} · ${v.tur === "trend" ? "📈 güncel" : "🌿 evergreen"}</div>
+    <div>${zamanYazi(v)} · <span class="alt">${v.tur === "trend" ? "📈 güncel" : "🌿 evergreen"}${v.seri ? ` · 📺 ${esc(v.seri)}${v.seri_no ? " #" + v.seri_no : ""}` : ""}</span></div>
     <h3>${esc(v.baslik || v.konu)}</h3>
     <span class="rozet ${durumSinif}">${durumYazi}</span>
+    ${v.youtube_guncelle ? `<span class="rozet">⏳ YouTube'a işleniyor</span>` : ""}
     ${v.elle_duzenlendi ? `<span class="rozet">✏️ elle düzenlendi</span>` : ""}
-    ${v.hook ? `<div class="alt" style="margin-top:6px">Ekran yazısı: <b>${esc(v.hook)}</b></div>` : ""}
+    ${v.yorum_id ? `<span class="rozet">💬 yorum atıldı</span>` : ""}
+    ${v.baslik && v.konu !== v.baslik ? `<div class="alt" style="margin-top:6px">Konu: ${esc(v.konu)}</div>` : ""}
+    ${v.hook ? `<div class="alt">Ekran yazısı: <b>${esc(v.hook)}</b></div>` : ""}
     ${duzeltme ? `<div class="alt">🔎 ${duzeltme} bilgi düzeltmesi yapıldı</div>` : ""}
     ${cumleler ? `<details><summary>Senaryo</summary><blockquote>${cumleler}</blockquote>
       ${(v.hook_secenekleri || []).length ? `<div class="ince" style="margin-top:6px">Açılış seçenekleri:<br>${
@@ -270,6 +335,37 @@ function videoKarti(v, no) {
     <div id="oynat_${id}"></div>
     <div class="yukleme" id="yb_${id}"><i></i></div>
   </div>`;
+}
+
+function bilgiModal(v) {
+  const grup = videoGrubu(v);
+  const saatDegisir = grup !== "yayinda";
+  modalAc(`
+    <h3>✏️ Bilgileri düzenle</h3>
+    <p class="alt">${zamanYazi(v)}</p>
+    ${grup === "zamanli" || grup === "yayinda" ? `<div class="uyari">Bu video YouTube'da; değişiklik birkaç dakika içinde YouTube'a da işlenir.</div>` : ""}
+    ${v.durum === "bekliyor" ? `<label>Konu (henüz üretilmedi — üretimde bu konu işlenir)</label><input id="bKonu" value="${esc(v.konu)}">` : ""}
+    <label>YouTube başlığı</label><input id="bBaslik" maxlength="95" value="${esc(v.baslik || "")}" placeholder="${v.durum === "bekliyor" ? "Boş bırakırsan Claude yazar" : ""}">
+    <label>YouTube açıklaması</label><textarea id="bAciklama" style="min-height:80px">${esc(v.aciklama || "")}</textarea>
+    ${saatDegisir ? `<label>Yayın tarihi ve saati (Türkiye saati)</label>
+      <input type="datetime-local" id="bZaman" value="${esc(String(v.yayinlanma).replace(" ", "T"))}">` :
+      `<p class="ince">Yayınlanmış videonun saati değişmez.</p>`}
+    <p class="ince">Ekran yazısı ya da senaryo değişikliği video görüntüsünü değiştirir → "🔁 Senaryo / yeniden üret" kullan.</p>
+    <div class="butonlar"><button onclick="modalKapat()">Vazgeç</button><button class="ana" id="bGonder">Kaydet</button></div>`);
+  $("#bGonder").onclick = async () => {
+    const istek = {id: v.id, baslik: $("#bBaslik").value.trim(), aciklama: $("#bAciklama").value.trim()};
+    if ($("#bKonu")) istek.konu = $("#bKonu").value.trim();
+    if ($("#bZaman")) {
+      const z = $("#bZaman").value.replace("T", " ").slice(0, 16);
+      if (z && new Date(z.replace(" ", "T") + ":00+03:00") <= new Date()) return bildir("Geçmiş bir saat seçilemez. Hemen yayın için 🚀 kullan.", 5000);
+      istek.yayinlanma = z;
+    }
+    $("#bGonder").disabled = true;
+    try {
+      await tetikle("onay.json", {duzenle: [istek], onayla: "", reddet: "", hemen: "", kontrol: false}, `düzenle ${v.id}`);
+      modalKapat(); bildir("✅ Gönderildi. 2-3 dakika sonra ↻ ile yenile.", 5000);
+    } catch (e) { bildir("❌ " + e.message, 6000); $("#bGonder").disabled = false; }
+  };
 }
 
 function kararCubugu() {
@@ -336,6 +432,7 @@ async function videoIslem(islem, id, buton) {
     buton.disabled = false; return;
   }
   if (islem === "duzenle") return duzenleModal(v);
+  if (islem === "bilgi") return bilgiModal(v);
   if (islem === "kendi") return kendiVideom(v);
 }
 
@@ -468,6 +565,21 @@ async function ayarlar() {
     <input type="range" id="muzikSes" min="4" max="40" value="${Math.round(a.MUZIK_SESI * 100)}">
     <label><input type="checkbox" id="yorum" ${a.OTOMATIK_YORUM ? "checked" : ""}> Yayından sonra kanal hesabıyla otomatik yorum at</label>
   </div>
+  <div class="kart"><h3>🤖 Yapay zekâ modelleri</h3>
+    <p class="alt">Her işi hangi yapay zekânın yapacağını seç. "Varsayılan" = yukarıdaki maliyet profili (Claude).
+      Ek sağlayıcı hata verirse o iş otomatik Claude ile yapılır, video üretimi durmaz.</p>
+    <div id="gorevler"></div>
+    <details style="margin-top:12px"><summary><b>➕ Ek yapay zekâ sağlayıcıları</b> <span class="alt">(DeepSeek, Gemini, OpenRouter, Groq…)</span></summary>
+      <ol class="alt">
+        <li>Sağlayıcının sitesinden API anahtarı al.</li>
+        <li>GitHub → YouTubeBot deposu → <b>Settings → Secrets and variables → Actions → New repository secret</b>.
+          Ad: <b>EK_API_KEY_1</b> (2. yuva için EK_API_KEY_2…), değer: anahtar.</li>
+        <li>Aşağıda yuvayı doldur → Kaydet → yukarıdaki listeden işlere ata.</li>
+        <li>Denemek için: İşler sekmesi → Anahtar testi (her eklenen modele kısa bir soru sorar).</li></ol>
+      <div class="uyari">Not: İnternet araması (güncel konu, bilgi doğrulama) sadece Claude'da var. Bu işleri başka modele verirsen aramasız yapılır — doğruluk düşebilir.</div>
+      <div id="saglayicilar"></div>
+    </details>
+  </div>
   <div class="kart"><h3>🔑 YouTube izni</h3>
     <label><input type="checkbox" id="suresiz" ${a.IZIN_SURESIZ ? "checked" : ""}> Google uygulaması yayında ("In production") → izin süresiz, 7 günlük geri sayım ve uyarılar kapanır</label>
   </div>
@@ -481,6 +593,40 @@ async function ayarlar() {
     });
   };
   saatCiz(a.YAYINLANMA_SAATLERI);
+  const saglayiciCiz = liste => {
+    $("#saglayicilar").innerHTML = [1, 2, 3].map(no => {
+      const s = liste.find(x => +x.yuva === no) || {};
+      return `<div class="kart" style="margin-top:10px" data-yuva="${no}"><b>Yuva ${no}</b> <span class="alt">(secret: EK_API_KEY_${no})</span>
+        <label>Hazır ayar</label><select class="sHazir">${Object.entries(HAZIR_SAGLAYICILAR).map(([k, [ad, url]]) =>
+          `<option value="${k}" ${s.base_url && s.base_url === url ? "selected" : ""}>${ad}</option>`).join("")}</select>
+        <label>Ad</label><input class="sAd" value="${esc(s.ad || "")}" placeholder="ör. DeepSeek (boş = yuva kullanılmıyor)">
+        <label>API adresi (base URL)</label><input class="sUrl" value="${esc(s.base_url || "")}" placeholder="https://.../v1">
+        <label>Model adları (virgülle — sağlayıcının sitesinde yazar)</label><input class="sModel" value="${esc((s.modeller || []).join(", "))}" placeholder="ör. deepseek-chat">
+        <div class="satir"><div><label>Fiyat: giriş $/1M token</label><input type="number" step="0.01" class="sFg" value="${esc((s.fiyat || [])[0] ?? "")}"></div>
+          <div><label>Fiyat: çıkış $/1M token</label><input type="number" step="0.01" class="sFc" value="${esc((s.fiyat || [])[1] ?? "")}"></div></div></div>`;
+    }).join("");
+    document.querySelectorAll(".sHazir").forEach(sel => sel.onchange = () => {
+      const k = sel.closest("[data-yuva]"), [ad, url] = HAZIR_SAGLAYICILAR[sel.value];
+      if (url) { k.querySelector(".sUrl").value = url; if (!k.querySelector(".sAd").value) k.querySelector(".sAd").value = ad; }
+      gorevCiz(saglayicilariOku());
+    });
+    document.querySelectorAll("#saglayicilar input").forEach(i => i.onchange = () => gorevCiz(saglayicilariOku()));
+  };
+  const saglayicilariOku = () => [...document.querySelectorAll("[data-yuva]")].map(k => ({
+    yuva: +k.dataset.yuva, ad: k.querySelector(".sAd").value.trim(), base_url: k.querySelector(".sUrl").value.trim(),
+    modeller: k.querySelector(".sModel").value.split(",").map(x => x.trim()).filter(Boolean),
+    fiyat: [+k.querySelector(".sFg").value || 0, +k.querySelector(".sFc").value || 0],
+  })).filter(s => s.ad && s.base_url && s.modeller.length);
+  let gorevSecim = {...(a.GOREV_MODELLERI || {})};
+  const gorevCiz = liste => {
+    document.querySelectorAll("[data-gorev]").forEach(x => gorevSecim[x.dataset.gorev] = x.value);
+    const secenekler = [["", "Varsayılan (maliyet profili)"], ...CLAUDE_MODELLERI,
+      ...liste.flatMap(s => s.modeller.map(m => [`ek${s.yuva}:${m}`, `${s.ad} · ${m}`]))];
+    $("#gorevler").innerHTML = Object.entries(GOREVLER).map(([k, ad]) => `<label>${esc(ad)}</label>
+      <select data-gorev="${k}">${secenekler.map(([v, t]) => `<option value="${esc(v)}" ${(gorevSecim[k] || "") === v ? "selected" : ""}>${esc(t)}</option>`).join("")}</select>`).join("");
+  };
+  saglayiciCiz(a.EK_SAGLAYICILAR || []);
+  gorevCiz(a.EK_SAGLAYICILAR || []);
   $("#saatEkle").onclick = () => { const l = [...document.querySelectorAll(".saat")].map(x => x.value); if (l.length < 6) { l.push("18:00"); saatCiz(l); } };
   $("#karartma").oninput = e => $("#kVal").textContent = e.target.value + "%";
   $("#muzikSes").oninput = e => $("#mVal").textContent = e.target.value + "%";
@@ -504,6 +650,8 @@ async function ayarlar() {
       GORSEL_CESITLILIK: $("#cesit").checked, SERI_ETIKETI: $("#seriEt").checked, FON_MUZIGI: $("#muzik").checked,
       MUZIK_SESI: +$("#muzikSes").value / 100, OTOMATIK_YORUM: $("#yorum").checked,
       IZIN_SURESIZ: $("#suresiz").checked,
+      EK_SAGLAYICILAR: saglayicilariOku(),
+      GOREV_MODELLERI: Object.fromEntries([...document.querySelectorAll("[data-gorev]")].map(x => [x.dataset.gorev, x.value]).filter(([, v]) => v)),
     };
     if (!yeni.KATEGORILER.length) return bildir("En az bir kategori olmalı.");
     $("#ayarKaydet").disabled = true;
@@ -525,7 +673,7 @@ async function istatistik() {
   const isler = {};
   (maliyet || []).filter(k => simdi - new Date(k.zaman) < 30 * gun).forEach(k => isler[k.is] = (isler[k.is] || 0) + k.usd);
   const enBuyukIs = Math.max(0.0001, ...Object.values(isler));
-  let html = `<div class="kart"><h3>💰 Claude maliyeti (tahmini)</h3>
+  let html = `<div class="kart"><h3>💰 Yapay zekâ maliyeti (tahmini)</h3>
     <div class="satir"><div><div class="alt">Son 7 gün</div><b style="font-size:22px">${toplam(7).toFixed(2)} $</b></div>
     <div><div class="alt">Son 30 gün</div><b style="font-size:22px">${toplam(30).toFixed(2)} $</b></div></div>
     ${Object.entries(isler).sort((a, b) => b[1] - a[1]).map(([is, usd]) => `
@@ -598,12 +746,17 @@ async function isler() {
   if (r.status === 404) { $("#ana").innerHTML = `<div class="hata">İşler okunamadı (token'a Actions: Read izni ver).</div>`; return; }
   const veri = await r.json();
   const simge = x => x.status !== "completed" ? "⏳" : ({success: "✅", failure: "❌", cancelled: "⏹️", skipped: "➖"}[x.conclusion] || "•");
-  $("#ana").innerHTML = `<div class="butonlar" style="margin:0 0 12px"><button id="islerYenile">↻ Yenile</button></div>` +
+  $("#ana").innerHTML = `<div class="butonlar" style="margin:0 0 12px"><button id="islerYenile">↻ Yenile</button>
+      <button id="anahtarTesti">🔑 Anahtar testi</button></div>` +
     (veri.workflow_runs || []).map(x => `<div class="kart">
       <div>${simge(x)} <b>${esc(x.name)}</b></div>
       <div class="alt">${new Date(x.created_at).toLocaleString("tr-TR")} · ${esc(x.display_title).slice(0, 80)}</div>
       <a class="ince" target="_blank" href="${esc(x.html_url)}">Ayrıntı</a></div>`).join("");
   $("#islerYenile").onclick = isler;
+  $("#anahtarTesti").onclick = async () => {
+    await tetikle("anahtar.json", {}, "anahtar testi");
+    bildir("🔑 Test başladı. 1-2 dakika sonra ↻ → 'Anahtar Testi' → Ayrıntı.", 5000);
+  };
 }
 
 // ─────────────────────────────────────────
