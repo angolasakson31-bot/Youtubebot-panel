@@ -79,7 +79,9 @@ a{color:var(--mavi)}
 const VARSAYILAN_DEPO = "angolasakson31-bot/YouTubeBot";
 const SCOPES = ["https://www.googleapis.com/auth/youtube.upload",
                 "https://www.googleapis.com/auth/youtube.readonly",
-                "https://www.googleapis.com/auth/yt-analytics.readonly"];
+                "https://www.googleapis.com/auth/yt-analytics.readonly",
+                "https://www.googleapis.com/auth/youtube",
+                "https://www.googleapis.com/auth/youtube.force-ssl"];  // youtube_yetki.py SCOPES ile aynı olmalı
 // ayarlar.py'deki varsayılanların aynısı (ayarlar.json yoksa bunlar gösterilir)
 const VARSAYILAN_AYARLAR = {
   YAYINLANMA_SAATLERI: ["12:00", "20:00"], TREND_GUNLERI: [3, 4, 5, 6],
@@ -117,11 +119,20 @@ function b64Kodla(metin) {
   return btoa(s);
 }
 async function gh(yol, ayar = {}) {
-  const r = await fetch(yol.startsWith("http") ? yol : "https://api.github.com" + yol, {
-    ...ayar,
-    headers: {Authorization: "Bearer " + TOKEN, Accept: "application/vnd.github+json",
-              "X-GitHub-Api-Version": "2022-11-28", ...(ayar.headers || {})},
-  });
+  let r;
+  for (let deneme = 0; ; deneme++) {   // telefon ağı / VPN kısa kopmalarında 3 kez dene
+    try {
+      r = await fetch(yol.startsWith("http") ? yol : "https://api.github.com" + yol, {
+        ...ayar,
+        headers: {Authorization: "Bearer " + TOKEN, Accept: "application/vnd.github+json",
+                  "X-GitHub-Api-Version": "2022-11-28", ...(ayar.headers || {})},
+      });
+      break;
+    } catch (e) {
+      if (deneme >= 2) throw new Error("GitHub'a bağlanılamadı (internet ya da VPN). VPN'i kapatıp sayfayı yenile.");
+      await new Promise(c => setTimeout(c, 1500 * (deneme + 1)));
+    }
+  }
   if (!r.ok && r.status !== 404) {
     let m = ""; try { m = (await r.json()).message; } catch (e) {}
     throw new Error(`GitHub ${r.status}: ${m}`);
