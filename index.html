@@ -67,6 +67,7 @@ a{color:var(--mavi)}
     <button data-s="isler">🔄 İşler</button>
   </nav>
 </header>
+<div id="izinSerit" style="display:none;margin:8px 12px 0;padding:10px 12px;border-radius:10px;cursor:pointer;font-size:14px"></div>
 <main id="ana"></main>
 <div id="kararCubugu"><span id="kararOzet"></span><span><button id="kararIptal">Vazgeç</button> <button class="ana" id="kararGonder">Gönder</button></span></div>
 <div id="bildirim"></div>
@@ -93,6 +94,7 @@ const VARSAYILAN_AYARLAR = {
   TTS_SES: "tr-TR-AhmetNeural", TTS_HIZ: "+10%", SES_MOTORU: "edge", ELEVENLABS_SES: "75SIZa3vvET95PHhf1yD", KARARTMA: 0.35, VIDEO_KLIP_ONCELIKLI: true,
   ALTYAZI_BOYUT: 96, ALTYAZI_KELIME: 3, HOOK_SURE: 2.8, HOOK_BOYUT: 100,
   GORSEL_CESITLILIK: true, SERI_ETIKETI: true, FON_MUZIGI: true, MUZIK_SESI: 0.16, OTOMATIK_YORUM: true,
+  IZIN_SURESIZ: false,
 };
 const GUN_ADLARI = ["Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz"];
 const DURUM = {
@@ -462,6 +464,9 @@ async function ayarlar() {
     <input type="range" id="muzikSes" min="4" max="40" value="${Math.round(a.MUZIK_SESI * 100)}">
     <label><input type="checkbox" id="yorum" ${a.OTOMATIK_YORUM ? "checked" : ""}> Yayından sonra kanal hesabıyla otomatik yorum at</label>
   </div>
+  <div class="kart"><h3>🔑 YouTube izni</h3>
+    <label><input type="checkbox" id="suresiz" ${a.IZIN_SURESIZ ? "checked" : ""}> Google uygulaması yayında ("In production") → izin süresiz, 7 günlük geri sayım ve uyarılar kapanır</label>
+  </div>
   <div class="butonlar"><button class="ana" id="ayarKaydet">💾 Kaydet</button></div>
   <p class="ince">Değişiklikler bir sonraki üretimde (her Perşembe ya da "Şimdi üretimi başlat") geçerli olur.</p>`;
   const saatCiz = liste => {
@@ -492,6 +497,7 @@ async function ayarlar() {
       HOOK_BOYUT: +$("#hBoyut").value, HOOK_SURE: +$("#hSure").value,
       GORSEL_CESITLILIK: $("#cesit").checked, SERI_ETIKETI: $("#seriEt").checked, FON_MUZIGI: $("#muzik").checked,
       MUZIK_SESI: +$("#muzikSes").value / 100, OTOMATIK_YORUM: $("#yorum").checked,
+      IZIN_SURESIZ: $("#suresiz").checked,
     };
     if (!yeni.KATEGORILER.length) return bildir("En az bir kategori olmalı.");
     $("#ayarKaydet").disabled = true;
@@ -506,7 +512,8 @@ async function ayarlar() {
 // ─────────────────────────────────────────
 async function istatistik() {
   $("#ana").innerHTML = `<p class="alt">Yükleniyor…</p>`;
-  const [perf, maliyet] = await Promise.all([dosyaOku("performans.json", null), dosyaOku("maliyet.json", [])]);
+  const [perf, maliyet, st] = await Promise.all([dosyaOku("performans.json", null), dosyaOku("maliyet.json", []),
+                                                 dosyaOku("strateji.json", null)]);
   const simdi = Date.now(), gun = 864e5;
   const toplam = g => (maliyet || []).filter(k => simdi - new Date(k.zaman) < g * gun).reduce((s, k) => s + k.usd, 0);
   const isler = {};
@@ -519,6 +526,18 @@ async function istatistik() {
       <div style="margin-top:10px"><div class="satir"><span>${esc(is)}</span><span style="text-align:right">${usd.toFixed(3)} $</span></div>
       <div class="cubuk"><i style="width:${100 * usd / enBuyukIs}%"></i></div></div>`).join("")}
     <p class="ince">Gerçek fatura: Anthropic Console → Usage.</p></div>`;
+  const liste = l => (l || []).map(x => `<li>${esc(x)}</li>`).join("");
+  html += st && st.ozet ? `<div class="kart"><h3>🧠 Sistemin öğrendikleri</h3>
+      <p class="ince">${esc(st.tarih)} · ${st.video_sayisi} video analiz edildi · her Perşembe yenilenir</p>
+      <p>${esc(st.ozet)}</p>
+      ${st.tutanlar && st.tutanlar.length ? `<b>✅ Tutanlar</b><ul class="alt">${liste(st.tutanlar)}</ul>` : ""}
+      ${st.tutmayanlar && st.tutmayanlar.length ? `<b>❌ Tutmayanlar</b><ul class="alt">${liste(st.tutmayanlar)}</ul>` : ""}
+      <b>📺 Seri öncelikleri</b>${Object.entries(st.seri_agirliklari || {}).sort((a, b) => b[1] - a[1]).map(([ad, a]) => `
+        <div style="margin-top:6px"><div class="satir"><span>${esc(ad)}</span><span style="text-align:right">${a.toFixed(1)}×</span></div>
+        <div class="cubuk"><i style="width:${50 * a}%"></i></div></div>`).join("")}
+      ${st.deneme ? `<p class="alt">🧪 Bu hafta denenecek: ${esc(st.deneme)}</p>` : ""}
+      ${(st.gecmis || []).length > 1 ? `<details><summary class="alt">Önceki haftalar</summary><ul class="alt">${(st.gecmis || []).slice(0, -1).reverse().map(h => `<li><b>${esc(h.tarih)}</b>: ${esc(h.ozet)}</li>`).join("")}</ul></details>` : ""}
+    </div>` : `<div class="kart"><h3>🧠 Sistemin öğrendikleri</h3><p class="alt">İlk analiz yeterli veri birikince (en az 6 video) Perşembe üretiminde yapılır.</p></div>`;
   if (perf && (perf.videolar || []).length) {
     const enCok = Math.max(1, ...perf.videolar.map(v => v.izlenme));
     html += `<div class="kart"><h3>📊 Kanal performansı</h3><p class="ince">Son güncelleme: ${esc(perf.tarih)} · ${perf.videolar.length} video</p>
@@ -595,9 +614,26 @@ async function sekmeAc(s) {
   }
 }
 document.querySelectorAll("#sekmeler button").forEach(b => b.onclick = () => sekmeAc(b.dataset.s));
+async function izinSeridi() {
+  try {
+    const [ayar, it] = await Promise.all([dosyaOku("ayarlar.json", {}), dosyaOku("izin_tarihi.json", null)]);
+    const s = $("#izinSerit");
+    if ((ayar && ayar.IZIN_SURESIZ) || !it || !it.tarih) { s.style.display = "none"; return; }
+    const kalan = 7 - (Date.now() - new Date(it.tarih)) / 864e5;
+    const bitis = new Date(new Date(it.tarih).getTime() + 7 * 864e5);
+    const tarih = bitis.toLocaleDateString("tr-TR", {weekday: "long", day: "numeric", month: "long"});
+    const [renk, ikon, metin] = kalan <= 1 ? ["#5a1d1d", "🔴", "HEMEN yenile"] : kalan <= 2 ? ["#5a4a1d", "🟡", "yakında yenile"] : ["#1d3a2a", "🟢", "sorun yok"];
+    s.style.background = renk;
+    s.innerHTML = kalan <= 0 ? `🔴 <b>YouTube izni bitti!</b> Videolar yüklenemiyor — dokun ve yenile.`
+      : `${ikon} YouTube izni: <b>${Math.max(0, Math.floor(kalan))} gün ${Math.floor((kalan % 1) * 24)} saat</b> kaldı (${tarih}) · ${metin}`;
+    s.style.display = "";
+    s.onclick = () => sekmeAc("izin");
+  } catch (e) {}
+}
 async function basla() {
   if (!TOKEN) return kurulumEkrani();
   $("#sekmeler").style.display = "";
+  izinSeridi(); setInterval(izinSeridi, 10 * 60 * 1000);
   try { const u = await (await gh("/user")).json(); $("#kullanici").textContent = u.login || ""; } catch (e) {}
   sekmeAc("videolar");
 }
