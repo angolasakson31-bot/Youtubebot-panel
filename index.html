@@ -95,6 +95,14 @@ const VARSAYILAN_AYARLAR = {
   ALTYAZI_BOYUT: 96, ALTYAZI_KELIME: 3, HOOK_SURE: 2.8, HOOK_BOYUT: 100,
   GORSEL_CESITLILIK: true, SERI_ETIKETI: true, FON_MUZIGI: true, MUZIK_SESI: 0.16, OTOMATIK_YORUM: true,
   IZIN_SURESIZ: false, KONU_NOTU: "", OZEL_KONULAR: [], EK_SAGLAYICILAR: [], GOREV_MODELLERI: {},
+  SES_EK_MODEL: "", SES_EK_SES: "alloy", SES_EK_FIYAT: 15,
+  GORSEL_KAYNAKLARI: ["pexels_video", "pixabay_video", "pexels_foto", "pixabay_foto"],
+  GORSEL_EK_MODEL: "", GORSEL_EK_BOYUT: "1024x1536", GORSEL_EK_FIYAT: 0.04,
+};
+const GORSEL_KAYNAK_ADLARI = {
+  pexels_video: "🎥 Pexels video klip (ücretsiz)", pixabay_video: "🎥 Pixabay video klip (ücretsiz)",
+  pexels_foto: "🖼️ Pexels fotoğraf (ücretsiz)", pixabay_foto: "🖼️ Pixabay fotoğraf (ücretsiz)",
+  ai_gorsel: "🤖 Yapay zekâ ile görsel üret (ücretli, görsel başına)",
 };
 // ayarlar.py GOREVLER ile aynı
 const GOREVLER = {
@@ -516,8 +524,13 @@ function kendiVideom(v) {
 // ─────────────────────────────────────────
 async function ayarlar() {
   $("#ana").innerHTML = `<p class="alt">Yükleniyor…</p>`;
-  const kayitli = await dosyaOku("ayarlar.json", {});
+  const [kayitli, bulunan] = await Promise.all([dosyaOku("ayarlar.json", {}), dosyaOku("modeller.json", null)]);
   const a = {...VARSAYILAN_AYARLAR, ...(typeof kayitli === "object" ? kayitli : {})};
+  // Claude modelleri: sağlayıcıdan otomatik bulunan liste (yeni çıkanlar 🆕), yoksa sabit liste
+  const yeniSinir = Date.now() - 45 * 864e5;
+  const claudeListe = (bulunan && (bulunan.claude || []).length)
+    ? bulunan.claude.filter(m => m.id.startsWith("claude-")).map(m => [m.id, `${new Date(m.tarih) > yeniSinir ? "🆕 " : ""}${m.ad}`])
+    : CLAUDE_MODELLERI;
   const secenek = (deger, liste) => liste.map(([d, y]) => `<option value="${esc(d)}" ${String(d) === String(deger) ? "selected" : ""}>${esc(y)}</option>`).join("");
   $("#ana").innerHTML = `
   <div class="kart"><h3>📅 Yayın planı</h3>
@@ -541,15 +554,30 @@ async function ayarlar() {
     <select id="onayModu">${secenek(a.ONAY_MODU, [["otomatik", "Tam otomatik — üretilir üretilmez yüklenir"], ["pazar", "Ben onaylarım, Pazar 20:00'de kalanlar otomatik"], ["elle", "Sadece ben onaylarım"]])}</select>
     <label><input type="checkbox" id="otoOnay" ${a.OTOMATIK_ONAY ? "checked" : ""}> (Pazar modunda) Pazar 20:00'de reddetmediklerimi otomatik onayla</label>
   </div>
-  <div class="kart"><h3>🎙️ Ses ve görüntü</h3>
-    <label>Ses motoru</label><select id="motor">${secenek(a.SES_MOTORU, [["edge", "Edge TTS (ücretsiz)"], ["elevenlabs", "ElevenLabs (daha doğal, ücretli)"]])}</select>
+  <div class="kart"><h3>🎙️ Ses</h3>
+    <label>Ses motoru</label><select id="motor">${secenek(a.SES_MOTORU, [["edge", "Edge TTS (ücretsiz)"], ["elevenlabs", "ElevenLabs (daha doğal, ücretli)"], ["ek", "Ek sağlayıcı (Yapay zekâ kartında eklediğin)"]])}</select>
     <label>ElevenLabs ses kimliği (Voice ID)</label><input id="elSes" value="${esc(a.ELEVENLABS_SES)}">
-    <p class="ince">ElevenLabs hata verir ya da kotası biterse o video otomatik Edge sesiyle üretilir.</p>
+    <div id="sesEk" style="${a.SES_MOTORU === "ek" ? "" : "display:none"}">
+      <label>Ek sağlayıcı ses modeli</label><select id="sesEkModel"></select>
+      <div class="satir"><div><label>Ses adı (sağlayıcının listesinden)</label><input id="sesEkSes" value="${esc(a.SES_EK_SES)}"></div>
+        <div><label>Fiyat $ / 1M karakter</label><input type="number" step="0.1" id="sesEkFiyat" value="${esc(a.SES_EK_FIYAT)}"></div></div>
+      <p class="ince">Bu sağlayıcılar kelime zamanı vermez; altyazı zamanlaması tahmin edilir (biraz kayabilir).</p>
+    </div>
+    <p class="ince">Seçilen ses hata verir ya da kotası biterse o video otomatik Edge sesiyle üretilir.</p>
     <label>Edge sesi</label><select id="ses">${secenek(a.TTS_SES, [["tr-TR-AhmetNeural", "Ahmet (erkek)"], ["tr-TR-EmelNeural", "Emel (kadın)"]])}</select>
     <label>Konuşma hızı</label><select id="hiz">${secenek(a.TTS_HIZ, [["+0%", "Normal"], ["+5%", "+%5"], ["+10%", "+%10"], ["+15%", "+%15"], ["+20%", "+%20"]])}</select>
     <label>Karartma: <b id="kVal">${Math.round(a.KARARTMA * 100)}%</b></label>
     <input type="range" id="karartma" min="0" max="60" value="${Math.round(a.KARARTMA * 100)}">
-    <label><input type="checkbox" id="klip" ${a.VIDEO_KLIP_ONCELIKLI ? "checked" : ""}> Önce hareketli video klip kullan (kapalıysa fotoğraf)</label>
+  </div>
+  <div class="kart"><h3>🖼️ Görüntü kaynakları</h3>
+    <p class="alt">Her sahne için yukarıdan aşağı denenir; ilk bulunan kullanılır. ▲▼ ile sırala, kutuyla aç/kapa.</p>
+    <div id="kaynaklar"></div>
+    <div id="gorselEk" style="margin-top:10px">
+      <label>Yapay zekâ görsel modeli</label><select id="gorselEkModel"></select>
+      <div class="satir"><div><label>Boyut</label><input id="gorselEkBoyut" value="${esc(a.GORSEL_EK_BOYUT)}"></div>
+        <div><label>Görsel başına $</label><input type="number" step="0.01" id="gorselEkFiyat" value="${esc(a.GORSEL_EK_FIYAT)}"></div></div>
+      <p class="ince">Yapay zekâ görselini sona koyarsan sadece stok bulunamayınca üretilir (ucuz); başa koyarsan her sahne üretilir (video başına ~6 görsel).</p>
+    </div>
   </div>
   <div class="kart"><h3>💬 Altyazı ve ekran yazısı</h3>
     <div class="satir"><div><label>Altyazı boyutu</label><input type="number" id="aBoyut" min="60" max="140" value="${esc(a.ALTYAZI_BOYUT)}"></div>
@@ -573,8 +601,9 @@ async function ayarlar() {
       <ol class="alt">
         <li>Sağlayıcının sitesinden API anahtarı al.</li>
         <li>GitHub → YouTubeBot deposu → <b>Settings → Secrets and variables → Actions → New repository secret</b>.
-          Ad: <b>EK_API_KEY_1</b> (2. yuva için EK_API_KEY_2…), değer: anahtar.</li>
-        <li>Aşağıda yuvayı doldur → Kaydet → yukarıdaki listeden işlere ata.</li>
+          Ad: <b>EK_API_KEY_1</b> (2. sağlayıcı için EK_API_KEY_2…), değer: anahtar.</li>
+        <li>Aşağıda "Sağlayıcı 1"i doldur → Kaydet → yukarıdaki listeden işlere ata.</li>
+        <li>3 ayrı şirket ekleyebilirsin (Sağlayıcı 1, 2, 3); her birinin anahtarı kendi numarasıyla saklanır.</li>
         <li>Denemek için: İşler sekmesi → Anahtar testi (her eklenen modele kısa bir soru sorar).</li></ol>
       <div class="uyari">Not: İnternet araması (güncel konu, bilgi doğrulama) sadece Claude'da var. Bu işleri başka modele verirsen aramasız yapılır — doğruluk düşebilir.</div>
       <div id="saglayicilar"></div>
@@ -596,12 +625,15 @@ async function ayarlar() {
   const saglayiciCiz = liste => {
     $("#saglayicilar").innerHTML = [1, 2, 3].map(no => {
       const s = liste.find(x => +x.yuva === no) || {};
-      return `<div class="kart" style="margin-top:10px" data-yuva="${no}"><b>Yuva ${no}</b> <span class="alt">(secret: EK_API_KEY_${no})</span>
+      return `<div class="kart" style="margin-top:10px" data-yuva="${no}"><b>Sağlayıcı ${no}</b> <span class="alt">— GitHub secret adı: EK_API_KEY_${no}</span>
         <label>Hazır ayar</label><select class="sHazir">${Object.entries(HAZIR_SAGLAYICILAR).map(([k, [ad, url]]) =>
           `<option value="${k}" ${s.base_url && s.base_url === url ? "selected" : ""}>${ad}</option>`).join("")}</select>
         <label>Ad</label><input class="sAd" value="${esc(s.ad || "")}" placeholder="ör. DeepSeek (boş = yuva kullanılmıyor)">
         <label>API adresi (base URL)</label><input class="sUrl" value="${esc(s.base_url || "")}" placeholder="https://.../v1">
-        <label>Model adları (virgülle — sağlayıcının sitesinde yazar)</label><input class="sModel" value="${esc((s.modeller || []).join(", "))}" placeholder="ör. deepseek-chat">
+        <label>Kullanacağın model adları (virgülle)</label><input class="sModel" value="${esc((s.modeller || []).join(", "))}" placeholder="ör. deepseek-chat">
+        ${((bulunan && bulunan.ek && bulunan.ek[no]) || []).length ? `<div class="ince">Bu sağlayıcıda bulunan modeller (dokun → ekle):<br>${
+          bulunan.ek[no].slice(0, 60).map(m => `<button type="button" class="mEkle" data-m="${esc(m)}" style="font-size:11px;padding:2px 6px;margin:2px">${esc(m)}</button>`).join("")}</div>`
+          : `<div class="ince">Anahtarı ekleyip kaydettikten sonra İşler → 🔑 Anahtar testi yaparsan bu sağlayıcıdaki modeller burada listelenir.</div>`}
         <div class="satir"><div><label>Fiyat: giriş $/1M token</label><input type="number" step="0.01" class="sFg" value="${esc((s.fiyat || [])[0] ?? "")}"></div>
           <div><label>Fiyat: çıkış $/1M token</label><input type="number" step="0.01" class="sFc" value="${esc((s.fiyat || [])[1] ?? "")}"></div></div></div>`;
     }).join("");
@@ -611,6 +643,11 @@ async function ayarlar() {
       gorevCiz(saglayicilariOku());
     });
     document.querySelectorAll("#saglayicilar input").forEach(i => i.onchange = () => gorevCiz(saglayicilariOku()));
+    document.querySelectorAll(".mEkle").forEach(b => b.onclick = () => {
+      const g = b.closest("[data-yuva]").querySelector(".sModel");
+      const l = g.value.split(",").map(x => x.trim()).filter(Boolean);
+      if (!l.includes(b.dataset.m)) { l.push(b.dataset.m); g.value = l.join(", "); gorevCiz(saglayicilariOku()); }
+    });
   };
   const saglayicilariOku = () => [...document.querySelectorAll("[data-yuva]")].map(k => ({
     yuva: +k.dataset.yuva, ad: k.querySelector(".sAd").value.trim(), base_url: k.querySelector(".sUrl").value.trim(),
@@ -620,11 +657,32 @@ async function ayarlar() {
   let gorevSecim = {...(a.GOREV_MODELLERI || {})};
   const gorevCiz = liste => {
     document.querySelectorAll("[data-gorev]").forEach(x => gorevSecim[x.dataset.gorev] = x.value);
-    const secenekler = [["", "Varsayılan (maliyet profili)"], ...CLAUDE_MODELLERI,
-      ...liste.flatMap(s => s.modeller.map(m => [`ek${s.yuva}:${m}`, `${s.ad} · ${m}`]))];
+    const ekler = liste.flatMap(s => s.modeller.map(m => [`ek${s.yuva}:${m}`, `${s.ad} · ${m}`]));
+    const secenekler = [["", "Varsayılan (maliyet profili)"], ...claudeListe, ...ekler];
+    const ekSec = (id, deger) => { const el = $(id); const v = el.value || deger || "";
+      el.innerHTML = [["", "— seç —"], ...ekler].map(([k, t]) => `<option value="${esc(k)}" ${k === v ? "selected" : ""}>${esc(t)}</option>`).join(""); };
+    ekSec("#sesEkModel", a.SES_EK_MODEL); ekSec("#gorselEkModel", a.GORSEL_EK_MODEL);
     $("#gorevler").innerHTML = Object.entries(GOREVLER).map(([k, ad]) => `<label>${esc(ad)}</label>
       <select data-gorev="${k}">${secenekler.map(([v, t]) => `<option value="${esc(v)}" ${(gorevSecim[k] || "") === v ? "selected" : ""}>${esc(t)}</option>`).join("")}</select>`).join("");
   };
+  let kaynakSira = [...(a.GORSEL_KAYNAKLARI || [])];
+  const kaynakCiz = () => {
+    const hepsi = [...kaynakSira, ...Object.keys(GORSEL_KAYNAK_ADLARI).filter(k => !kaynakSira.includes(k))];
+    $("#kaynaklar").innerHTML = hepsi.map((k, i) => `<div class="satir" style="align-items:center;margin:4px 0">
+      <label style="flex:4;margin:0"><input type="checkbox" class="kAcik" data-k="${k}" ${kaynakSira.includes(k) ? "checked" : ""}> ${esc(GORSEL_KAYNAK_ADLARI[k])}</label>
+      <button type="button" data-yukari="${k}" style="flex:0" ${i === 0 ? "disabled" : ""}>▲</button>
+      <button type="button" data-asagi="${k}" style="flex:0">▼</button></div>`).join("");
+    const oku = () => { kaynakSira = [...document.querySelectorAll(".kAcik")].filter(x => x.checked).map(x => x.dataset.k); };
+    document.querySelectorAll(".kAcik").forEach(x => x.onchange = () => { oku(); kaynakCiz(); });
+    const tasi = (k, yon) => { const l = [...document.querySelectorAll(".kAcik")].map(x => x.dataset.k), i = l.indexOf(k), j = i + yon;
+      if (j < 0 || j >= l.length) return; [l[i], l[j]] = [l[j], l[i]];
+      const acik = new Set(kaynakSira); kaynakSira = l.filter(x => acik.has(x)); kaynakCiz(); };
+    document.querySelectorAll("[data-yukari]").forEach(b => b.onclick = () => tasi(b.dataset.yukari, -1));
+    document.querySelectorAll("[data-asagi]").forEach(b => b.onclick = () => tasi(b.dataset.asagi, 1));
+    $("#gorselEk").style.display = kaynakSira.includes("ai_gorsel") ? "" : "none";
+  };
+  kaynakCiz();
+  $("#motor").onchange = e => $("#sesEk").style.display = e.target.value === "ek" ? "" : "none";
   saglayiciCiz(a.EK_SAGLAYICILAR || []);
   gorevCiz(a.EK_SAGLAYICILAR || []);
   $("#saatEkle").onclick = () => { const l = [...document.querySelectorAll(".saat")].map(x => x.value); if (l.length < 6) { l.push("18:00"); saatCiz(l); } };
@@ -644,16 +702,22 @@ async function ayarlar() {
       ONAY_MODU: $("#onayModu").value,
       TTS_SES: $("#ses").value, TTS_HIZ: $("#hiz").value,
       SES_MOTORU: $("#motor").value, ELEVENLABS_SES: $("#elSes").value.trim() || VARSAYILAN_AYARLAR.ELEVENLABS_SES, KARARTMA: +$("#karartma").value / 100,
-      VIDEO_KLIP_ONCELIKLI: $("#klip").checked,
+      VIDEO_KLIP_ONCELIKLI: true,
       ALTYAZI_BOYUT: +$("#aBoyut").value, ALTYAZI_KELIME: +$("#aKelime").value,
       HOOK_BOYUT: +$("#hBoyut").value, HOOK_SURE: +$("#hSure").value,
       GORSEL_CESITLILIK: $("#cesit").checked, SERI_ETIKETI: $("#seriEt").checked, FON_MUZIGI: $("#muzik").checked,
       MUZIK_SESI: +$("#muzikSes").value / 100, OTOMATIK_YORUM: $("#yorum").checked,
       IZIN_SURESIZ: $("#suresiz").checked,
       EK_SAGLAYICILAR: saglayicilariOku(),
+      SES_EK_MODEL: $("#sesEkModel").value, SES_EK_SES: $("#sesEkSes").value.trim() || "alloy", SES_EK_FIYAT: +$("#sesEkFiyat").value || 0,
+      GORSEL_KAYNAKLARI: kaynakSira, GORSEL_EK_MODEL: $("#gorselEkModel").value,
+      GORSEL_EK_BOYUT: $("#gorselEkBoyut").value.trim() || "1024x1536", GORSEL_EK_FIYAT: +$("#gorselEkFiyat").value || 0,
       GOREV_MODELLERI: Object.fromEntries([...document.querySelectorAll("[data-gorev]")].map(x => [x.dataset.gorev, x.value]).filter(([, v]) => v)),
     };
     if (!yeni.KATEGORILER.length) return bildir("En az bir kategori olmalı.");
+    if (!yeni.GORSEL_KAYNAKLARI.length) return bildir("En az bir görüntü kaynağı açık olmalı.");
+    if (yeni.GORSEL_KAYNAKLARI.includes("ai_gorsel") && !yeni.GORSEL_EK_MODEL) return bildir("Yapay zekâ görseli için model seç (önce sağlayıcı ekle).", 5000);
+    if (yeni.SES_MOTORU === "ek" && !yeni.SES_EK_MODEL) return bildir("Ek sağlayıcı sesi için model seç.", 5000);
     $("#ayarKaydet").disabled = true;
     try { await dosyaYaz("ayarlar.json", yeni, "Panel: ayarlar güncellendi"); bildir("✅ Ayarlar kaydedildi."); }
     catch (e) { bildir("❌ " + e.message, 6000); }
