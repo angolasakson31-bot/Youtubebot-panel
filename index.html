@@ -178,6 +178,32 @@ async function dosyaYaz(yol, icerik, mesaj) {
     body: JSON.stringify({message: mesaj, content: b64Kodla(metin), sha, branch: "main"})});
 }
 // Tetik: bu dosya değişince ilgili GitHub Actions işi başlar (commit mesajında [tetik] olmalı)
+// ─── Anahtar kasası: anahtar telefonda depodaki açık anahtarla (RSA-OAEP) şifrelenir, sadece SIFRE'yi bilen işler çözer
+async function kasaDurumu() {
+  const r = await gh(`/repos/${DEPO}/contents/kasa?ref=main&t=${Date.now()}`);
+  if (r.status === 404) return {kurulu: false, adlar: [], dosyalar: []};
+  const l = await r.json();
+  const adlar = l.map(x => x.name);
+  return {kurulu: adlar.includes("acik_anahtar.pem"), dosyalar: l,
+          adlar: adlar.filter(n => n.endsWith(".enc") && n !== "gizli_anahtar.enc").map(n => n.slice(0, -4))};
+}
+async function kasayaYaz(ad, deger) {
+  const pem = await dosyaOku("kasa/acik_anahtar.pem", null);
+  if (!pem || typeof pem !== "string") throw new Error("Kasa kurulu değil: İşler → 🔑 Anahtar testi'ni bir kez çalıştır.");
+  const der = Uint8Array.from(atob(pem.replace(/-----[^-]+-----/g, "").replace(/\s+/g, "")), c => c.charCodeAt(0));
+  const k = await crypto.subtle.importKey("spki", der, {name: "RSA-OAEP", hash: "SHA-256"}, false, ["encrypt"]);
+  const sif = new Uint8Array(await crypto.subtle.encrypt({name: "RSA-OAEP"}, k, new TextEncoder().encode(deger.trim())));
+  let b = ""; sif.forEach(x => b += String.fromCharCode(x));
+  await dosyaYaz(`kasa/${ad}.enc`, btoa(b), `Panel: ${ad} anahtar kasasına eklendi (şifreli)`);
+}
+async function kasadanSil(ad) {
+  const r = await gh(`/repos/${DEPO}/contents/kasa/${ad}.enc?ref=main&t=${Date.now()}`);
+  if (r.status === 404) return;
+  const {sha} = await r.json();
+  await gh(`/repos/${DEPO}/contents/kasa/${ad}.enc`, {method: "DELETE",
+    body: JSON.stringify({message: `Panel: ${ad} anahtar kasasından kaldırıldı`, sha, branch: "main"})});
+}
+
 async function tetikle(dosya, veri, aciklama) {
   await dosyaYaz(`tetik/${dosya}`, {...veri, zaman: new Date().toISOString(), kaynak: "panel"},
                  `[tetik] Panel: ${aciklama}`);
@@ -593,6 +619,11 @@ async function ayarlar() {
     <input type="range" id="muzikSes" min="4" max="40" value="${Math.round(a.MUZIK_SESI * 100)}">
     <label><input type="checkbox" id="yorum" ${a.OTOMATIK_YORUM ? "checked" : ""}> Yayından sonra kanal hesabıyla otomatik yorum at</label>
   </div>
+  <div class="kart"><h3>🔑 API anahtarları</h3>
+    <p class="alt">Anahtarı buraya yapıştır → 🔒 Kaydet. Telefonunda şifrelenir, şifreli hâliyle saklanır; panel ve depo anahtarı açık hâlde hiç görmez.
+      Buradan eklenen anahtar GitHub secret'ının önüne geçer. Kaldırırsan varsa GitHub secret'ı kullanılır.</p>
+    <div id="anahtarlar"><p class="alt">Yükleniyor…</p></div>
+  </div>
   <div class="kart"><h3>🤖 Yapay zekâ modelleri</h3>
     <p class="alt">Her işi hangi yapay zekânın yapacağını seç. "Varsayılan" = yukarıdaki maliyet profili (Claude).
       Ek sağlayıcı hata verirse o iş otomatik Claude ile yapılır, video üretimi durmaz.</p>
@@ -600,9 +631,9 @@ async function ayarlar() {
     <details style="margin-top:12px"><summary><b>➕ Ek yapay zekâ sağlayıcıları</b> <span class="alt">(DeepSeek, Gemini, OpenRouter, Groq…)</span></summary>
       <ol class="alt">
         <li>Sağlayıcının sitesinden API anahtarı al.</li>
-        <li>GitHub → YouTubeBot deposu → <b>Settings → Secrets and variables → Actions → New repository secret</b>.
-          Ad: <b>EK_API_KEY_1</b> (2. sağlayıcı için EK_API_KEY_2…), değer: anahtar.</li>
-        <li>Aşağıda "Sağlayıcı 1"i doldur → Kaydet → yukarıdaki listeden işlere ata.</li>
+        <li>Aşağıda "Sağlayıcı 1"i doldur (hazır ayardan şirketi seç) → 💾 Kaydet.</li>
+        <li>Anahtarı yukarıdaki <b>🔑 API anahtarları</b> kartında "Sağlayıcı 1" satırına yapıştır → 🔒 Kaydet.</li>
+        <li>Yukarıdaki listeden işlere ata → 💾 Kaydet.</li>
         <li>3 ayrı şirket ekleyebilirsin (Sağlayıcı 1, 2, 3); her birinin anahtarı kendi numarasıyla saklanır.</li>
         <li>Denemek için: İşler sekmesi → Anahtar testi (her eklenen modele kısa bir soru sorar).</li></ol>
       <div class="uyari">Not: İnternet araması (güncel konu, bilgi doğrulama) sadece Claude'da var. Bu işleri başka modele verirsen aramasız yapılır — doğruluk düşebilir.</div>
@@ -625,7 +656,7 @@ async function ayarlar() {
   const saglayiciCiz = liste => {
     $("#saglayicilar").innerHTML = [1, 2, 3].map(no => {
       const s = liste.find(x => +x.yuva === no) || {};
-      return `<div class="kart" style="margin-top:10px" data-yuva="${no}"><b>Sağlayıcı ${no}</b> <span class="alt">— GitHub secret adı: EK_API_KEY_${no}</span>
+      return `<div class="kart" style="margin-top:10px" data-yuva="${no}"><b>Sağlayıcı ${no}</b>
         <label>Hazır ayar</label><select class="sHazir">${Object.entries(HAZIR_SAGLAYICILAR).map(([k, [ad, url]]) =>
           `<option value="${k}" ${s.base_url && s.base_url === url ? "selected" : ""}>${ad}</option>`).join("")}</select>
         <label>Ad</label><input class="sAd" value="${esc(s.ad || "")}" placeholder="ör. DeepSeek (boş = yuva kullanılmıyor)">
@@ -683,6 +714,33 @@ async function ayarlar() {
   };
   kaynakCiz();
   $("#motor").onchange = e => $("#sesEk").style.display = e.target.value === "ek" ? "" : "none";
+  const anahtarCiz = async () => {
+    let d;
+    try { d = await kasaDurumu(); } catch (e) { $("#anahtarlar").innerHTML = `<div class="hata">${esc(e.message)}</div>`; return; }
+    if (!d.kurulu) { $("#anahtarlar").innerHTML = `<div class="uyari">Kasa henüz kurulmadı. <b>İşler → 🔑 Anahtar testi</b>'ni bir kez çalıştır (1-2 dk), sonra bu sayfayı yenile.</div>`; return; }
+    const saglayiciAdi = no => ((a.EK_SAGLAYICILAR || []).find(x => +x.yuva === no) || {}).ad;
+    const satirlar = [["CLAUDE_API_KEY", "Claude (Anthropic)"], ["ELEVENLABS_API_KEY", "ElevenLabs"], ["PEXELS_API_KEY", "Pexels"],
+      ["PIXABAY_API_KEY", "Pixabay"], ...[1, 2, 3].map(n => [`EK_API_KEY_${n}`, `Sağlayıcı ${n}${saglayiciAdi(n) ? " · " + saglayiciAdi(n) : ""}`])];
+    $("#anahtarlar").innerHTML = satirlar.map(([ad, etiket]) => {
+      const var_ = d.adlar.includes(ad);
+      return `<div style="margin:10px 0"><div><b>${esc(etiket)}</b> <span class="rozet ${var_ ? "onay" : ""}">${var_ ? "✅ panelden eklendi" : "GitHub secret'ı (varsa)"}</span></div>
+        <div class="satir" style="margin-top:4px"><input type="password" autocomplete="off" data-anahtar="${ad}" placeholder="${var_ ? "Değiştirmek için yeni anahtarı yapıştır" : "Anahtarı yapıştır"}" style="flex:3">
+          <button type="button" data-kaydet="${ad}" style="flex:0;white-space:nowrap">🔒 Kaydet</button>
+          ${var_ ? `<button type="button" data-kaldir="${ad}" style="flex:0">✕</button>` : ""}</div></div>`;
+    }).join("") + `<p class="ince">Değişiklik bir sonraki işte geçerli olur. Denemek için İşler → 🔑 Anahtar testi.</p>`;
+    document.querySelectorAll("[data-kaydet]").forEach(b => b.onclick = async () => {
+      const ad = b.dataset.kaydet, g = document.querySelector(`[data-anahtar="${ad}"]`);
+      if (g.value.trim().length < 8) return bildir("Anahtar çok kısa görünüyor.");
+      b.disabled = true;
+      try { await kasayaYaz(ad, g.value); g.value = ""; bildir("🔒 Şifreli kaydedildi.", 4000); anahtarCiz(); }
+      catch (e) { bildir("❌ " + e.message, 6000); b.disabled = false; }
+    });
+    document.querySelectorAll("[data-kaldir]").forEach(b => b.onclick = async () => {
+      if (!confirm("Bu anahtar panelden kaldırılsın mı? (Varsa GitHub secret'ı kullanılır.)")) return;
+      try { await kasadanSil(b.dataset.kaldir); bildir("Kaldırıldı."); anahtarCiz(); } catch (e) { bildir("❌ " + e.message, 6000); }
+    });
+  };
+  anahtarCiz();
   saglayiciCiz(a.EK_SAGLAYICILAR || []);
   gorevCiz(a.EK_SAGLAYICILAR || []);
   $("#saatEkle").onclick = () => { const l = [...document.querySelectorAll(".saat")].map(x => x.value); if (l.length < 6) { l.push("18:00"); saatCiz(l); } };
