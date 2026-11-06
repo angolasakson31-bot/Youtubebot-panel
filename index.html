@@ -95,7 +95,7 @@ const VARSAYILAN_AYARLAR = {
   ALTYAZI_BOYUT: 96, ALTYAZI_KELIME: 3, HOOK_SURE: 2.8, HOOK_BOYUT: 100,
   GORSEL_CESITLILIK: true, SERI_ETIKETI: true, FON_MUZIGI: true, MUZIK_SESI: 0.16, OTOMATIK_YORUM: true,
   IZIN_SURESIZ: false, KONU_NOTU: "", OZEL_KONULAR: [], EK_SAGLAYICILAR: [], GOREV_MODELLERI: {},
-  SES_EK_MODEL: "", SES_EK_SES: "alloy", SES_EK_FIYAT: 15,
+  SES_EK_MODEL: "", SES_EK_SES: "alloy", SES_EK_FIYAT: 15, ELEVENLABS_MODEL: "eleven_multilingual_v2", ELEVENLABS_BITIS: "",
   GORSEL_KAYNAKLARI: ["pexels_video", "pixabay_video", "pexels_foto", "pixabay_foto"],
   GORSEL_EK_MODEL: "", GORSEL_EK_BOYUT: "1024x1536", GORSEL_EK_FIYAT: 0.04,
 };
@@ -204,6 +204,29 @@ async function kasadanSil(ad) {
     body: JSON.stringify({message: `Panel: ${ad} anahtar kasasından kaldırıldı`, sha, branch: "main"})});
 }
 
+// Panel istekleri kuyruğa EKLENİR (üzerine yazılmaz) → GitHub bir işi iptal etse bile istek kaybolmaz
+async function kuyrugaEkle(dosya, veri, aciklama) {
+  const mevcut = await dosyaOku(`tetik/${dosya}`, {});
+  const islenen = await dosyaOku("tetik/islenen.json", {});
+  const tur = dosya.replace(".json", "");
+  const biten = new Set(((islenen || {})[tur] || []).map(String));
+  const sinir = Date.now() - 14 * 864e5;
+  let liste = (mevcut && Array.isArray(mevcut.istekler)) ? mevcut.istekler : [];
+  liste = liste.filter(i => !biten.has(String(i.no)) || new Date(i.zaman || 0).getTime() > sinir);
+  liste.push({...veri, no: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), zaman: new Date().toISOString()});
+  await dosyaYaz(`tetik/${dosya}`, {istekler: liste.slice(-100), not: "Panel istek kuyruğu. İşlenenler tetik/islenen.json'da."},
+                 `[tetik] Panel: ${aciklama}`);
+}
+async function bekleyenIstekler() {
+  try {
+    const [o, y, i] = await Promise.all([dosyaOku("tetik/onay.json", {}), dosyaOku("tetik/yeniden.json", {}), dosyaOku("tetik/islenen.json", {})]);
+    const biten = t => new Set((((i || {})[t]) || []).map(String));
+    const bo = biten("onay"), by = biten("yeniden");
+    return [...((o && o.istekler) || []).filter(x => !bo.has(String(x.no))),
+            ...((y && y.istekler) || []).filter(x => !by.has(String(x.no))).map(x => ({...x, yeniden: true}))];
+  } catch (e) { return []; }
+}
+
 async function tetikle(dosya, veri, aciklama) {
   await dosyaYaz(`tetik/${dosya}`, {...veri, zaman: new Date().toISOString(), kaynak: "panel"},
                  `[tetik] Panel: ${aciklama}`);
@@ -272,11 +295,16 @@ const GRUP = {
   uretim:  ["🎬 Üretilecek (Perşembe üretiminde)", ""],
   red:     ["❌ Reddedildi", "red"],
 };
+let BEKLEYEN = [], YORUMLAR = {};
+function bekleyenVar(id) {
+  return BEKLEYEN.some(i => i.id === id || String(i.hemen || "").split(",").includes(id) || String(i.reddet || "").split(",").includes(id)
+    || String(i.onayla || "").split(",").includes(id) || (i.duzenle || []).some(d => d.id === id));
+}
 let VIDEO_FILTRE = (() => { try { return localStorage.getItem("ytb_filtre") || "sirada"; } catch (e) { return "sirada"; } })();
 
 async function videolar() {
   $("#ana").innerHTML = `<p class="alt">Yükleniyor…</p>`;
-  PLAN = await dosyaOku("haftalik_plan.json", []);
+  [PLAN, BEKLEYEN, YORUMLAR] = await Promise.all([dosyaOku("haftalik_plan.json", []), bekleyenIstekler(), dosyaOku("yorumlar.json", {})]);
   if (!PLAN.length) { $("#ana").innerHTML = `<div class="kart">Henüz video yok.</div>`; return; }
   const say = g => PLAN.filter(v => videoGrubu(v) === g).length;
   let html = `<div class="kart"><div class="satir" style="text-align:center">
@@ -320,7 +348,8 @@ async function videolar() {
   $("#yenile").onclick = () => { RELEASES = {}; videolar(); };
   $("#uretBaslat").onclick = async () => {
     if (!confirm("Bekleyen konular için üretim başlatılsın mı? (Yeni hafta yoksa sadece bekleyenler üretilir.)")) return;
-    await tetikle("uretim.json", {test: false}, "üretimi başlat"); bildir("▶️ Üretim başlatıldı. 'İşler' sekmesinden izleyebilirsin.");
+    try { await tetikle("uretim.json", {test: false}, "üretimi başlat"); bildir("▶️ Üretim başlatıldı. 'İşler' sekmesinden izleyebilirsin."); }
+    catch (e) { bildir("❌ " + e.message, 6000); }
   };
   document.querySelectorAll("[data-hepsi]").forEach(b => b.onclick = () => {
     PLAN.filter(v => v.hafta === b.dataset.hepsi && v.durum === "video_hazir").forEach(v => KARARLAR[v.id] = "onay");
@@ -352,12 +381,15 @@ function videoKarti(v) {
   const cumleler = (v.cumleler || []).map(c => `<p>${esc(c)}</p>`).join("");
   const duzeltme = (v.dogrulama_duzeltmeleri || []).length;
   return `<div class="kart" id="k_${id}">
-    <div>${zamanYazi(v)} · <span class="alt">${v.tur === "trend" ? "📈 güncel" : "🌿 evergreen"}${v.seri ? ` · 📺 ${esc(v.seri)}${v.seri_no ? " #" + v.seri_no : ""}` : ""}</span></div>
+    <div>${zamanYazi(v)} · <span class="alt">${v.tur === "trend" ? "📈 güncel" : "🌿 evergreen"}${v.seri ? ` · 📺 ${esc(v.seri)}${v.seri_no ? " #" + esc(v.seri_no) : ""}` : ""}</span></div>
     <h3>${esc(v.baslik || v.konu)}</h3>
     <span class="rozet ${durumSinif}">${durumYazi}</span>
     ${v.youtube_guncelle ? `<span class="rozet">⏳ YouTube'a işleniyor</span>` : ""}
+    ${bekleyenVar(v.id) ? `<span class="rozet hazir">⏳ isteğin sırada (birkaç dk)</span>` : ""}
+    ${v.hemen_yayinla_istek ? `<span class="rozet">🚀 hemen yayına alınacak</span>` : ""}
+    ${v.silinecek ? `<span class="rozet red">🗑️ YouTube'dan silinecek</span>` : ""}
     ${v.elle_duzenlendi ? `<span class="rozet">✏️ elle düzenlendi</span>` : ""}
-    ${v.yorum_id ? `<span class="rozet">💬 yorum atıldı</span>` : ""}
+    ${v.yorum_id || (YORUMLAR || {})[v.id] ? `<span class="rozet">💬 yorum atıldı</span>` : ""}
     ${v.baslik && v.konu !== v.baslik ? `<div class="alt" style="margin-top:6px">Konu: ${esc(v.konu)}</div>` : ""}
     ${v.hook ? `<div class="alt">Ekran yazısı: <b>${esc(v.hook)}</b></div>` : ""}
     ${duzeltme ? `<div class="alt">🔎 ${duzeltme} bilgi düzeltmesi yapıldı</div>` : ""}
@@ -391,12 +423,14 @@ function bilgiModal(v) {
     if ($("#bKonu")) istek.konu = $("#bKonu").value.trim();
     if ($("#bZaman")) {
       const z = $("#bZaman").value.replace("T", " ").slice(0, 16);
-      if (z && new Date(z.replace(" ", "T") + ":00+03:00") <= new Date()) return bildir("Geçmiş bir saat seçilemez. Hemen yayın için 🚀 kullan.", 5000);
-      istek.yayinlanma = z;
+      if (z && z !== v.yayinlanma) {
+        if (new Date(z.replace(" ", "T") + ":00+03:00") <= new Date()) return bildir("Geçmiş bir saat seçilemez. Hemen yayın için 🚀 kullan.", 5000);
+        istek.yayinlanma = z;
+      }
     }
     $("#bGonder").disabled = true;
     try {
-      await tetikle("onay.json", {duzenle: [istek], onayla: "", reddet: "", hemen: "", kontrol: false}, `düzenle ${v.id}`);
+      await kuyrugaEkle("onay.json", {duzenle: [istek]}, `düzenle ${v.id}`);
       modalKapat(); bildir("✅ Gönderildi. 2-3 dakika sonra ↻ ile yenile.", 5000);
     } catch (e) { bildir("❌ " + e.message, 6000); $("#bGonder").disabled = false; }
   };
@@ -411,11 +445,17 @@ function kararCubugu() {
 }
 $("#kararIptal").onclick = () => { KARARLAR = {}; kararCubugu(); if (SEKME === "videolar") videolar(); };
 $("#kararGonder").onclick = async () => {
-  const onay = Object.keys(KARARLAR).filter(k => KARARLAR[k] === "onay");
-  const red = Object.keys(KARARLAR).filter(k => KARARLAR[k] === "red");
   $("#kararGonder").disabled = true;
+  let onay = [], red = [];
   try {
-    await tetikle("onay.json", {onayla: onay.join(","), reddet: red.join(","), kontrol: false},
+    // Bekletilmiş eski kararlar artık onay beklemeyen (ör. yüklenmiş / yayında) videolara gitmesin
+    const taze = await dosyaOku("haftalik_plan.json", []);
+    const hazir = new Set(taze.filter(v => v.durum === "video_hazir").map(v => v.id));
+    onay = Object.keys(KARARLAR).filter(k => KARARLAR[k] === "onay" && hazir.has(k));
+    red = Object.keys(KARARLAR).filter(k => KARARLAR[k] === "red" && hazir.has(k));
+    if (!onay.length && !red.length) { KARARLAR = {}; kararCubugu(); $("#kararGonder").disabled = false;
+      return bildir("Bu videolar artık onay beklemiyor (durumları değişmiş). Liste yenileniyor.", 5000), videolar(); }
+    await kuyrugaEkle("onay.json", {onayla: onay.join(","), reddet: red.join(",")},
                   `${onay.length} onay, ${red.length} ret`);
     KARARLAR = {}; kararCubugu();
     bildir("✅ Kararlar gönderildi. Onaylananlar birkaç dakika içinde YouTube'a yüklenmeye başlar.", 5000);
@@ -437,7 +477,9 @@ async function videoIslem(islem, id, buton) {
   if (islem === "onay" || islem === "red") {
     KARARLAR[id] = KARARLAR[id] === islem ? undefined : islem;
     if (!KARARLAR[id]) delete KARARLAR[id];
-    kararCubugu(); videolar(); return;
+    document.querySelectorAll(`[data-id="${CSS.escape(id)}"][data-islem="onay"], [data-id="${CSS.escape(id)}"][data-islem="red"]`).forEach(b =>
+      b.className = KARARLAR[id] === b.dataset.islem ? (b.dataset.islem === "onay" ? "sec-onay" : "sec-red") : "");
+    kararCubugu(); return;
   }
   if (islem === "izle" || islem === "indir") {
     const eski = buton.textContent; buton.disabled = true; buton.textContent = "⏳";
@@ -458,8 +500,7 @@ async function videoIslem(islem, id, buton) {
     if (!confirm(soru)) return;
     buton.disabled = true;
     try {
-      await tetikle("onay.json", islem === "hemen" ? {hemen: id, onayla: "", reddet: "", kontrol: false}
-                                                   : {hemen: "", onayla: "", reddet: id, kontrol: false},
+      await kuyrugaEkle("onay.json", islem === "hemen" ? {hemen: id} : {reddet: id},
                     islem === "hemen" ? `hemen yayınla ${id}` : `YouTube'dan sil ${id}`);
       bildir(islem === "hemen" ? "🚀 Gönderildi. 2-3 dakika içinde yayında." : "🗑️ Gönderildi. 2-3 dakika içinde silinir.", 5000);
     } catch (e) { bildir("❌ " + e.message, 6000); }
@@ -473,7 +514,7 @@ async function videoIslem(islem, id, buton) {
 function duzenleModal(v) {
   modalAc(`
     <h3>✏️ ${esc(v.baslik || v.konu)}</h3>
-    ${v.durum === "onaylandi" ? `<div class="uyari">Bu video onaylanmış. Yeniden üretilince tekrar onay bekler.</div>` : ""}
+    <div class="uyari">Yeniden üretim 3-5 dakika sürer. Onay modu "otomatik" ise biter bitmez onaylanıp YouTube'a yüklenir; değilse senin onayını bekler.</div>
     <label>Ne yapılsın?</label>
     <select id="dMod">
       <option value="duzenle">Benim düzenlemelerimle yeniden üret</option>
@@ -506,7 +547,7 @@ function duzenleModal(v) {
     if (mod === "duzenle" && veri.gorsel_kelimeler.length && veri.gorsel_kelimeler.length !== veri.cumleler.length)
       return bildir("Görsel kelime sayısı cümle sayısıyla aynı olmalı (ya da görsel kutusunu boş bırak).", 5000);
     $("#dGonder").disabled = true;
-    try { await tetikle("yeniden.json", veri, `yeniden üret ${v.id}`); modalKapat();
+    try { await kuyrugaEkle("yeniden.json", veri, `yeniden üret ${v.id}`); modalKapat();
           bildir("🔁 Yeniden üretim başladı. 3-5 dakika sonra 'Yenile'.", 5000); }
     catch (e) { bildir("❌ " + e.message, 6000); $("#dGonder").disabled = false; }
   };
@@ -528,17 +569,20 @@ function kendiVideom(v) {
     try {
       const b = await assetBul(v);
       if (!b) throw new Error("Bu haftanın Release'i bulunamadı.");
-      if (b.asset) await gh(`/repos/${DEPO}/releases/assets/${b.asset.id}`, {method: "DELETE"});
-      await new Promise((tamam, hata) => {
+      const geciciAd = `${v.id}.yeni-${Date.now()}.mp4`;
+      const yuklenen = await new Promise((tamam, hata) => {
         const x = new XMLHttpRequest();
-        x.open("POST", `https://uploads.github.com/repos/${DEPO}/releases/${b.rel.id}/assets?name=${encodeURIComponent(v.id + ".mp4")}`);
+        x.open("POST", `https://uploads.github.com/repos/${DEPO}/releases/${b.rel.id}/assets?name=${encodeURIComponent(geciciAd)}`);
         x.setRequestHeader("Authorization", "Bearer " + TOKEN);
         x.setRequestHeader("Content-Type", dosya.type || "video/mp4");
         x.upload.onprogress = e => { if (e.lengthComputable) $("#kIlerleme i").style.width = (100 * e.loaded / e.total) + "%"; };
-        x.onload = () => x.status < 300 ? tamam() : hata(new Error("Yükleme hatası " + x.status + ": " + x.responseText.slice(0, 150)));
+        x.onload = () => x.status < 300 ? tamam(JSON.parse(x.responseText)) : hata(new Error("Yükleme hatası " + x.status + ": " + x.responseText.slice(0, 150)));
         x.onerror = () => hata(new Error("Ağ hatası (tarayıcı yüklemeyi engellemiş olabilir)."));
         x.send(dosya);
       });
+      // Yükleme başarılı → eskisini sil, yenisini asıl adına çevir (yarıda kalırsa eski video kaybolmaz)
+      if (b.asset) await gh(`/repos/${DEPO}/releases/assets/${b.asset.id}`, {method: "DELETE"});
+      await gh(`/repos/${DEPO}/releases/assets/${yuklenen.id}`, {method: "PATCH", body: JSON.stringify({name: `${v.id}.mp4`})});
       delete RELEASES[v.release];
       modalKapat(); bildir("✅ Senin videon yüklendi. YouTube'a bu sürüm gidecek.", 5000);
     } catch (e) { bildir("❌ " + e.message, 7000); $("#kGonder").disabled = false; }
@@ -583,6 +627,8 @@ async function ayarlar() {
   <div class="kart"><h3>🎙️ Ses</h3>
     <label>Ses motoru</label><select id="motor">${secenek(a.SES_MOTORU, [["edge", "Edge TTS (ücretsiz)"], ["elevenlabs", "ElevenLabs (daha doğal, ücretli)"], ["ek", "Ek sağlayıcı (Yapay zekâ kartında eklediğin)"]])}</select>
     <label>ElevenLabs ses kimliği (Voice ID)</label><input id="elSes" value="${esc(a.ELEVENLABS_SES)}">
+    <label>ElevenLabs aboneliğinin bittiği gün (boşsa yok)</label><input type="date" id="elBitis" value="${esc(a.ELEVENLABS_BITIS || "")}">
+    <p class="ince">Bu günden itibaren videolar otomatik ücretsiz Edge sesiyle üretilir (ücretsiz plan şartlarına düşmesin diye).</p>
     <div id="sesEk" style="${a.SES_MOTORU === "ek" ? "" : "display:none"}">
       <label>Ek sağlayıcı ses modeli</label><select id="sesEkModel"></select>
       <div class="satir"><div><label>Ses adı (sağlayıcının listesinden)</label><input id="sesEkSes" value="${esc(a.SES_EK_SES)}"></div>
@@ -695,16 +741,16 @@ async function ayarlar() {
     // Ses / görsel listesi: elle yazılan modeller + sağlayıcıda bulunan, işe uygun adlı modeller (otomatik)
     const uygunlar = desen => liste.flatMap(sg => ((bulunan && bulunan.ek && bulunan.ek[sg.yuva]) || [])
       .filter(m => desen.test(m) && !sg.modeller.includes(m)).map(m => [`ek${sg.yuva}:${m}`, `${sg.ad} · ${m}`]));
-    const ekSec = (id, deger, desen) => { const el = $(id); const v = el.value || deger || "";
+    const ekSec = (id, deger, desen) => { const el = $(id); const v = el.options.length ? el.value : (deger || "");
       const l = [["", "— seç —"], ...uygunlar(desen), ...ekler];
       if (v && !l.some(([k]) => k === v)) l.push([v, v]);
       el.innerHTML = l.map(([k, t]) => `<option value="${esc(k)}" ${k === v ? "selected" : ""}>${esc(t)}</option>`).join(""); };
     ekSec("#sesEkModel", a.SES_EK_MODEL, /tts|speech|audio|voice|sonic/i);
     ekSec("#gorselEkModel", a.GORSEL_EK_MODEL, /image|dall|imagen|flux|diffusion|sdxl|recraft|ideogram/i);
     $("#gorevler").innerHTML = Object.entries(GOREVLER).map(([k, ad]) => `<label>${esc(ad)}</label>
-      <select data-gorev="${k}">${secenekler.map(([v, t]) => `<option value="${esc(v)}" ${(gorevSecim[k] || "") === v ? "selected" : ""}>${esc(t)}</option>`).join("")}</select>`).join("");
+      <select data-gorev="${k}">${[...secenekler, ...(gorevSecim[k] && !secenekler.some(([v]) => v === gorevSecim[k]) ? [[gorevSecim[k], gorevSecim[k] + " (listede yok)"]] : [])].map(([v, t]) => `<option value="${esc(v)}" ${(gorevSecim[k] || "") === v ? "selected" : ""}>${esc(t)}</option>`).join("")}</select>`).join("");
   };
-  let kaynakSira = [...(a.GORSEL_KAYNAKLARI || [])];
+  let kaynakSira = [...(a.GORSEL_KAYNAKLARI || [])].filter(k => k in GORSEL_KAYNAK_ADLARI);
   const kaynakCiz = () => {
     const hepsi = [...kaynakSira, ...Object.keys(GORSEL_KAYNAK_ADLARI).filter(k => !kaynakSira.includes(k))];
     $("#kaynaklar").innerHTML = hepsi.map((k, i) => `<div class="satir" style="align-items:center;margin:4px 0">
@@ -773,19 +819,38 @@ async function ayarlar() {
       HOOK_BOYUT: +$("#hBoyut").value, HOOK_SURE: +$("#hSure").value,
       GORSEL_CESITLILIK: $("#cesit").checked, SERI_ETIKETI: $("#seriEt").checked, FON_MUZIGI: $("#muzik").checked,
       MUZIK_SESI: +$("#muzikSes").value / 100, OTOMATIK_YORUM: $("#yorum").checked,
-      IZIN_SURESIZ: $("#suresiz").checked,
+      IZIN_SURESIZ: $("#suresiz").checked, ELEVENLABS_BITIS: $("#elBitis").value || "",
       EK_SAGLAYICILAR: saglayicilariOku(),
       SES_EK_MODEL: $("#sesEkModel").value, SES_EK_SES: $("#sesEkSes").value.trim() || "alloy", SES_EK_FIYAT: +$("#sesEkFiyat").value || 0,
       GORSEL_KAYNAKLARI: kaynakSira, GORSEL_EK_MODEL: $("#gorselEkModel").value,
       GORSEL_EK_BOYUT: $("#gorselEkBoyut").value.trim() || "1024x1536", GORSEL_EK_FIYAT: +$("#gorselEkFiyat").value || 0,
       GOREV_MODELLERI: Object.fromEntries([...document.querySelectorAll("[data-gorev]")].map(x => [x.dataset.gorev, x.value]).filter(([, v]) => v)),
     };
+    const sinirla = (x, alt, ust, vars) => Number.isFinite(x) && x >= alt && x <= ust ? x : vars;
+    yeni.ALTYAZI_BOYUT = sinirla(yeni.ALTYAZI_BOYUT, 60, 140, VARSAYILAN_AYARLAR.ALTYAZI_BOYUT);
+    yeni.ALTYAZI_KELIME = sinirla(yeni.ALTYAZI_KELIME, 1, 5, VARSAYILAN_AYARLAR.ALTYAZI_KELIME);
+    yeni.HOOK_BOYUT = sinirla(yeni.HOOK_BOYUT, 60, 150, VARSAYILAN_AYARLAR.HOOK_BOYUT);
+    yeni.HOOK_SURE = sinirla(yeni.HOOK_SURE, 1, 6, VARSAYILAN_AYARLAR.HOOK_SURE);
     if (!yeni.KATEGORILER.length) return bildir("En az bir kategori olmalı.");
     if (!yeni.GORSEL_KAYNAKLARI.length) return bildir("En az bir görüntü kaynağı açık olmalı.");
     if (yeni.GORSEL_KAYNAKLARI.includes("ai_gorsel") && !yeni.GORSEL_EK_MODEL) return bildir("Yapay zekâ görseli için model seç (önce sağlayıcı ekle).", 5000);
     if (yeni.SES_MOTORU === "ek" && !yeni.SES_EK_MODEL) return bildir("Ek sağlayıcı sesi için model seç.", 5000);
     $("#ayarKaydet").disabled = true;
-    try { await dosyaYaz("ayarlar.json", yeni, "Panel: ayarlar güncellendi"); bildir("✅ Ayarlar kaydedildi."); }
+    try {
+      // Sayfa açıkken bot da ayarlar.json'u değiştirmiş olabilir (ör. kullanılan istek konuları silindi).
+      // Taze dosyayı al, sadece BU SAYFADA değiştirdiğin alanları üzerine yaz.
+      const taze = await dosyaOku("ayarlar.json", {});
+      const sonuc = {...(typeof taze === "object" && taze ? taze : {})};
+      let degisen = 0;
+      for (const [k, deger] of Object.entries(yeni)) {
+        if (JSON.stringify(deger) !== JSON.stringify(a[k])) { sonuc[k] = deger; degisen++; }
+        else if (!(k in sonuc)) sonuc[k] = deger;
+      }
+      if (!degisen) { bildir("Değişiklik yok."); $("#ayarKaydet").disabled = false; return; }
+      await dosyaYaz("ayarlar.json", sonuc, "Panel: ayarlar güncellendi");
+      Object.assign(a, yeni);
+      bildir(`✅ Ayarlar kaydedildi (${degisen} değişiklik).`);
+    }
     catch (e) { bildir("❌ " + e.message, 6000); }
     $("#ayarKaydet").disabled = false;
   };
@@ -812,7 +877,7 @@ async function istatistik() {
     <p class="ince">Gerçek fatura: Anthropic Console → Usage.</p></div>`;
   const liste = l => (l || []).map(x => `<li>${esc(x)}</li>`).join("");
   html += st && st.ozet ? `<div class="kart"><h3>🧠 Sistemin öğrendikleri</h3>
-      <p class="ince">${esc(st.tarih)} · ${st.video_sayisi} video analiz edildi · her Perşembe yenilenir</p>
+      <p class="ince">${esc(st.tarih)} · ${esc(st.video_sayisi)} video analiz edildi · her Perşembe yenilenir</p>
       <p>${esc(st.ozet)}</p>
       ${st.tutanlar && st.tutanlar.length ? `<b>✅ Tutanlar</b><ul class="alt">${liste(st.tutanlar)}</ul>` : ""}
       ${st.tutmayanlar && st.tutmayanlar.length ? `<b>❌ Tutmayanlar</b><ul class="alt">${liste(st.tutmayanlar)}</ul>` : ""}
@@ -826,7 +891,7 @@ async function istatistik() {
     const enCok = Math.max(1, ...perf.videolar.map(v => v.izlenme));
     html += `<div class="kart"><h3>📊 Kanal performansı</h3><p class="ince">Son güncelleme: ${esc(perf.tarih)} · ${perf.videolar.length} video</p>
       ${perf.videolar.map(v => `<div style="margin-top:10px">
-        <div class="satir"><span style="flex:3">${esc(v.baslik)}</span><span style="text-align:right">${v.izlenme} 👁 ${v.begeni} 👍${v.izlenme_yuzdesi != null ? ` · %${v.izlenme_yuzdesi}` : ""}</span></div>
+        <div class="satir"><span style="flex:3">${esc(v.baslik)}</span><span style="text-align:right">${esc(v.izlenme)} 👁 ${esc(v.begeni)} 👍${v.izlenme_yuzdesi != null ? ` · %${esc(v.izlenme_yuzdesi)}` : ""}</span></div>
         <div class="cubuk"><i style="width:${100 * v.izlenme / enCok}%"></i></div></div>`).join("")}</div>`;
   } else html += `<div class="kart"><h3>📊 Kanal performansı</h3><p class="alt">Veri her Perşembe üretimde toplanır.</p></div>`;
   $("#ana").innerHTML = html;
@@ -842,16 +907,19 @@ async function izin() {
     dosyaOku("izin_tarihi.json", null),
   ]);
   const c = gizli && (gizli.installed || gizli.web);
+  const ayarSuresiz = (await dosyaOku("ayarlar.json", {}) || {}).IZIN_SURESIZ;
   let durum = "⚠️ İznin alındığı tarih bilinmiyor.";
   if (izinTarihi && izinTarihi.tarih) {
     const yas = Math.floor((Date.now() - new Date(izinTarihi.tarih)) / 864e5);
     const kalan = 7 - yas;
     durum = `${kalan <= 1 ? "🔴" : kalan <= 2 ? "🟡" : "🟢"} ${yas} gün önce yenilendi — yaklaşık <b>${Math.max(kalan, 0)} gün</b> kaldı.`;
   }
+  if (ayarSuresiz) durum = `♾️ Google uygulaması yayında: izin <b>süresiz</b>, yenilemen gerekmez. (Son yenileme: ${izinTarihi && izinTarihi.tarih ? esc(new Date(izinTarihi.tarih).toLocaleDateString("tr-TR")) : "?"})
+    <br><span class="alt">Sadece bir hata olursa (ör. Google izni geri alırsa) aşağıdan yeniden izin ver.</span>`;
   const link = c ? c.auth_uri + "?" + new URLSearchParams({client_id: c.client_id, redirect_uri: "http://localhost:8080/",
     response_type: "code", scope: SCOPES.join(" "), access_type: "offline", prompt: "consent"}) : "";
   $("#ana").innerHTML = `<div class="kart"><h3>🔑 YouTube izni</h3><p>${durum}</p>
-    <p class="alt">Google "Testing" modunda izin 7 günde biter. Bitmeden yenile:</p>
+    <p class="alt">${ayarSuresiz ? "Gerekirse yeniden izin vermek için:" : 'Google "Testing" modunda izin 7 günde biter. Bitmeden yenile:'}</p>
     <ol class="alt"><li>Aşağıdaki düğmeye bas, <b>kanalın Gmail'iyle</b> izin ver (Tümünü seç → Devam).</li>
       <li>"Bu siteye ulaşılamıyor" sayfası açılınca <b>adres çubuğundaki adresi</b> kopyala.</li>
       <li>Buraya yapıştırıp <b>Gönder</b>'e bas. (Kod birkaç dakikada bozulur, hemen yap.)</li></ol>
@@ -880,12 +948,13 @@ async function isler() {
       <button id="anahtarTesti">🔑 Anahtar testi</button></div>` +
     (veri.workflow_runs || []).map(x => `<div class="kart">
       <div>${simge(x)} <b>${esc(x.name)}</b></div>
-      <div class="alt">${new Date(x.created_at).toLocaleString("tr-TR")} · ${esc(x.display_title).slice(0, 80)}</div>
+      <div class="alt">${new Date(x.created_at).toLocaleString("tr-TR")} · ${esc(String(x.display_title || "").slice(0, 80))}</div>
       <a class="ince" target="_blank" href="${esc(x.html_url)}">Ayrıntı</a></div>`).join("");
   $("#islerYenile").onclick = isler;
   $("#anahtarTesti").onclick = async () => {
-    await tetikle("anahtar.json", {}, "anahtar testi");
-    bildir("🔑 Test başladı. 1-2 dakika sonra ↻ → 'Anahtar Testi' → Ayrıntı.", 5000);
+    try { await tetikle("anahtar.json", {}, "anahtar testi");
+          bildir("🔑 Test başladı. 1-2 dakika sonra ↻ → 'Anahtar Testi' → Ayrıntı.", 5000); }
+    catch (e) { bildir("❌ " + e.message, 6000); }
   };
 }
 
