@@ -320,7 +320,12 @@ async function videolar() {
     <nav class="filtre" style="display:flex;gap:6px;flex-wrap:wrap;margin:0 0 12px">
       ${[["sirada", "⏭️ Sıradakiler"], ["yayinda", "✅ Yayınlananlar"], ["hepsi", "🗂️ Haftalara göre"]].map(([k, ad]) =>
         `<button data-filtre="${k}" class="${VIDEO_FILTRE === k ? "aktif ana" : ""}">${ad}</button>`).join("")}
-      <button id="yenile">↻</button><button id="uretBaslat">▶️ Üretimi başlat</button></nav>`;
+      <button id="yenile">↻</button><button id="uretBaslat">▶️ Üretimi başlat</button>
+      <button id="yeniVideo" class="ana">⚡ Yeni video yaptır</button></nav>`;
+  const yeniBekleyen = BEKLEYEN.filter(i => i.mod === "yeni");
+  if (yeniBekleyen.length) html += `<div class="kart"><b>⚡ Hazırlanan yeni videoların</b>${yeniBekleyen.map(i =>
+    `<div class="alt">⏳ ${esc(i.konu)} — ${i.yayinlanma ? esc(i.yayinlanma.replace("T", " ")) : "hazır olunca hemen"}</div>`).join("")}
+    <p class="ince">Üretim ~5-10 dk sürer, sonra burada kart olarak görünür (↻ ile yenile).</p></div>`;
   if (VIDEO_FILTRE === "hepsi") {
     const haftalar = [...new Set(PLAN.map(v => v.hafta))].sort().reverse();
     for (const h of haftalar) {
@@ -346,6 +351,7 @@ async function videolar() {
     VIDEO_FILTRE = b.dataset.filtre; try { localStorage.setItem("ytb_filtre", VIDEO_FILTRE); } catch (e) {} videolar();
   });
   $("#yenile").onclick = () => { RELEASES = {}; videolar(); };
+  $("#yeniVideo").onclick = yeniVideoModal;
   $("#uretBaslat").onclick = async () => {
     if (!confirm("Bekleyen konular için üretim başlatılsın mı? (Yeni hafta yoksa sadece bekleyenler üretilir.)")) return;
     try { await tetikle("uretim.json", {test: false}, "üretimi başlat"); bildir("▶️ Üretim başlatıldı. 'İşler' sekmesinden izleyebilirsin."); }
@@ -381,7 +387,7 @@ function videoKarti(v) {
   const cumleler = (v.cumleler || []).map(c => `<p>${esc(c)}</p>`).join("");
   const duzeltme = (v.dogrulama_duzeltmeleri || []).length;
   return `<div class="kart" id="k_${id}">
-    <div>${zamanYazi(v)} · <span class="alt">${v.tur === "trend" ? "📈 güncel" : "🌿 evergreen"}${v.seri ? ` · 📺 ${esc(v.seri)}${v.seri_no ? " #" + esc(v.seri_no) : ""}` : ""}</span></div>
+    <div>${zamanYazi(v)} · <span class="alt">${v.tur === "trend" ? "📈 güncel" : v.tur === "ozel" ? "⚡ senin isteğin" : "🌿 evergreen"}${v.seri ? ` · 📺 ${esc(v.seri)}${v.seri_no ? " #" + esc(v.seri_no) : ""}` : ""}</span></div>
     <h3>${esc(v.baslik || v.konu)}</h3>
     <span class="rozet ${durumSinif}">${durumYazi}</span>
     ${v.youtube_guncelle ? `<span class="rozet">⏳ YouTube'a işleniyor</span>` : ""}
@@ -401,6 +407,47 @@ function videoKarti(v) {
     <div id="oynat_${id}"></div>
     <div class="yukleme" id="yb_${id}"><i></i></div>
   </div>`;
+}
+
+function yeniVideoModal() {
+  const simdi = new Date(Date.now() + 3 * 3600e3);   // Türkiye saati (UTC+3)
+  const varsayilan = new Date(simdi.getTime() + 2 * 3600e3).toISOString().slice(0, 13) + ":00";
+  modalAc(`
+    <h3>⚡ Yeni video yaptır</h3>
+    <p class="alt">İstediğin konuda video hemen üretilir (~5-10 dk) ve seçtiğin zamanda YouTube'da yayınlanır.
+      Senaryo, bilgi doğrulama, ses, görüntü, başlık her zamanki gibi otomatik.</p>
+    <label>Konu (ne anlatsın? ne kadar ayrıntı verirsen o kadar iyi)</label>
+    <textarea id="yKonu" style="min-height:80px" placeholder="ör. Göbeklitepe neden Stonehenge'den 6000 yıl eski ve kim yaptı?"></textarea>
+    <label>Ne zaman yayınlansın?</label>
+    <select id="yZamanTur"><option value="hemen">Hazır olur olmaz hemen</option><option value="saat">Belirli bir saatte</option></select>
+    <div id="ySaatKutu" style="display:none"><label>Yayın tarihi ve saati (Türkiye saati)</label>
+      <input type="datetime-local" id="yZaman" value="${varsayilan}"></div>
+    <details><summary class="alt">İsteğe bağlı: kendi başlığın / senaryon</summary>
+      <label>YouTube başlığı (boşsa yapay zekâ yazar)</label><input id="yBaslik" maxlength="95">
+      <label>Kendi senaryon (her satır bir cümle = bir sahne; boşsa yapay zekâ yazar)</label>
+      <textarea id="ySenaryo" style="min-height:110px"></textarea></details>
+    <p class="ince">Not: YouTube'un günlük yükleme kotası (~6 video) o gün dolmuşsa video ertesi gün 11:07'de yüklenir.
+      Perşembe toplu üretimi sürerken istek sıraya girer, o bitince yapılır.</p>
+    <div class="butonlar"><button onclick="modalKapat()">Vazgeç</button><button class="ana" id="yGonder">⚡ Üret</button></div>`);
+  $("#yZamanTur").onchange = e => $("#ySaatKutu").style.display = e.target.value === "saat" ? "" : "none";
+  $("#yGonder").onclick = async () => {
+    const konu = $("#yKonu").value.trim();
+    if (konu.length < 5) return bildir("Konuyu biraz daha açık yaz.");
+    const istek = {mod: "yeni", konu, baslik: $("#yBaslik").value.trim(),
+                   cumleler: $("#ySenaryo").value.split("\n").map(x => x.trim()).filter(Boolean)};
+    if ($("#yZamanTur").value === "saat") {
+      const z = $("#yZaman").value;
+      if (!z) return bildir("Saat seç.");
+      if (new Date(z + ":00+03:00") < new Date(Date.now() + 20 * 60e3)) return bildir("En az 20 dk sonrası seç ya da 'hemen'i seç.", 5000);
+      if (PLAN.some(v => v.yayinlanma === z.replace("T", " ") && v.durum !== "reddedildi"))
+        if (!confirm("Bu saatte zaten bir video var. Yine de aynı saate koyayım mı?")) return;
+      istek.yayinlanma = z.replace("T", " ");
+    }
+    $("#yGonder").disabled = true;
+    try { await kuyrugaEkle("yeniden.json", istek, `yeni video: ${konu.slice(0, 40)}`); modalKapat();
+          bildir("⚡ Üretim başladı. ~5-10 dk sonra Videolar'da görünür.", 6000); videolar(); }
+    catch (e) { bildir("❌ " + e.message, 6000); $("#yGonder").disabled = false; }
+  };
 }
 
 function bilgiModal(v) {
