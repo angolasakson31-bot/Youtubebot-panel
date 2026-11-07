@@ -94,7 +94,7 @@ const VARSAYILAN_AYARLAR = {
   TTS_SES: "tr-TR-AhmetNeural", TTS_HIZ: "+10%", SES_MOTORU: "edge", ELEVENLABS_SES: "75SIZa3vvET95PHhf1yD", KARARTMA: 0.35, VIDEO_KLIP_ONCELIKLI: true,
   ALTYAZI_BOYUT: 96, ALTYAZI_KELIME: 3, HOOK_SURE: 2.8, HOOK_BOYUT: 100,
   GORSEL_CESITLILIK: true, SERI_ETIKETI: true, FON_MUZIGI: true, MUZIK_SESI: 0.16, OTOMATIK_YORUM: true,
-  IZIN_SURESIZ: false, KONU_NOTU: "", OZEL_KONULAR: [], EK_SAGLAYICILAR: [], GOREV_MODELLERI: {},
+  IZIN_SURESIZ: false, KONU_NOTU: "", OZEL_KONULAR: [], YUKLEME_ONCEDEN_SAAT: 30, EK_SAGLAYICILAR: [], GOREV_MODELLERI: {},
   SES_EK_MODEL: "", SES_EK_SES: "alloy", SES_EK_FIYAT: 15, ELEVENLABS_MODEL: "eleven_multilingual_v2", ELEVENLABS_BITIS: "",
   GORSEL_KAYNAKLARI: ["pexels_video", "pixabay_video", "pexels_foto", "pixabay_foto"],
   GORSEL_EK_MODEL: "", GORSEL_EK_BOYUT: "1024x1536", GORSEL_EK_FIYAT: 0.04,
@@ -290,7 +290,7 @@ function videoGrubu(v) {
 const GRUP = {
   yayinda: ["✅ Yayında", "onay"],
   zamanli: ["⏰ YouTube'a yüklendi (gizli) — saati gelince kendiliğinden yayınlanacak", "yuk"],
-  sirada:  ["📤 Hazır — YouTube'a yüklenecek (her gün 11:07), sonra saatinde yayınlanacak", ""],
+  sirada:  ["📤 Hazır — yayınına yakın YouTube'a yüklenecek (11:07), saatinde yayınlanacak", ""],
   onay:    ["👀 Onayını bekliyor", "hazir"],
   uretim:  ["🎬 Üretilecek (Perşembe üretiminde)", ""],
   red:     ["❌ Reddedildi", "red"],
@@ -657,6 +657,10 @@ async function ayarlar() {
     <div class="gunler">${GUN_ADLARI.map((g, i) => `<label><input type="checkbox" data-gun="${i}" ${a.TREND_GUNLERI.includes(i) ? "checked" : ""}>${g}</label>`).join("")}</div>
     <label>Günlük en fazla YouTube yüklemesi (kota: en fazla 6)</label>
     <input type="number" id="limit" min="1" max="6" value="${esc(a.GUNLUK_YUKLEME_LIMITI)}">
+    <label>Videolar YouTube'a ne zaman yüklensin?</label>
+    <select id="onceden">${secenek(String(a.YUKLEME_ONCEDEN_SAAT), [["30", "Yayından ~1 gün önce (önerilen, güvenlik payı var)"],
+      ["14", "Sadece yayın günü sabahı (11:07)"], ["0", "Onaylanınca hemen hepsi (YouTube'da gizli sırada bekler)"]])}</select>
+    <p class="ince">Video yüklenene kadar bizde bekler: başlığını, saatini, senaryosunu serbestçe değiştirebilirsin.</p>
   </div>
   <div class="kart"><h3>🧠 Konular ve yapay zekâ</h3>
     <label>Konu kategorileri (her satır bir kategori)</label><textarea id="kategoriler">${esc(a.KATEGORILER.join("\n"))}</textarea>
@@ -854,6 +858,7 @@ async function ayarlar() {
       YAYINLANMA_SAATLERI: saatler,
       TREND_GUNLERI: [...document.querySelectorAll("[data-gun]")].filter(x => x.checked).map(x => +x.dataset.gun),
       GUNLUK_YUKLEME_LIMITI: Math.min(6, Math.max(1, +$("#limit").value || 6)),
+      YUKLEME_ONCEDEN_SAAT: +$("#onceden").value,
       KATEGORILER: $("#kategoriler").value.split("\n").map(x => x.trim()).filter(Boolean),
       KONU_NOTU: $("#konuNotu").value.trim(),
       OZEL_KONULAR: $("#ozelKonular").value.split("\n").map(x => x.trim()).filter(Boolean),
