@@ -94,7 +94,7 @@ const VARSAYILAN_AYARLAR = {
   TTS_SES: "tr-TR-AhmetNeural", TTS_HIZ: "+10%", SES_MOTORU: "edge", ELEVENLABS_SES: "75SIZa3vvET95PHhf1yD", KARARTMA: 0.35, VIDEO_KLIP_ONCELIKLI: true,
   ALTYAZI_BOYUT: 96, ALTYAZI_KELIME: 3, HOOK_SURE: 2.8, HOOK_BOYUT: 100,
   GORSEL_CESITLILIK: true, SERI_ETIKETI: true, FON_MUZIGI: true, MUZIK_SESI: 0.16, OTOMATIK_YORUM: true,
-  IZIN_SURESIZ: false, KONU_NOTU: "", OZEL_KONULAR: [], YUKLEME_ONCEDEN_SAAT: 30, URETIM_RITMI: "gunluk", EK_SAGLAYICILAR: [], GOREV_MODELLERI: {},
+  IZIN_SURESIZ: false, KONU_NOTU: "", OZEL_KONULAR: [], YUKLEME_ONCEDEN_SAAT: 30, URETIM_RITMI: "gunluk", TALEP_KONTROLU: true, EK_SAGLAYICILAR: [], GOREV_MODELLERI: {},
   SES_EK_MODEL: "", SES_EK_SES: "alloy", SES_EK_FIYAT: 15, ELEVENLABS_MODEL: "eleven_multilingual_v2", ELEVENLABS_BITIS: "",
   GORSEL_KAYNAKLARI: ["pexels_video", "pixabay_video", "pexels_foto", "pixabay_foto"],
   GORSEL_EK_MODEL: "", GORSEL_EK_BOYUT: "1024x1536", GORSEL_EK_FIYAT: 0.04,
@@ -417,6 +417,7 @@ function videoKarti(v) {
     ${v.elle_duzenlendi ? `<span class="rozet">✏️ elle düzenlendi</span>` : ""}
     ${v.yorum_id || (YORUMLAR || {})[v.id] ? `<span class="rozet">💬 yorum atıldı</span>` : ""}
     ${v.baslik && v.konu !== v.baslik ? `<div class="alt" style="margin-top:6px">Konu: ${esc(v.konu)}</div>` : ""}
+    ${v.talep != null ? `<div class="ince">📈 Talep: benzer Türkçe Shorts ortalama ${esc(Number(v.talep).toLocaleString("tr-TR"))} izlenme ("${esc(v.talep_arama || "")}")</div>` : ""}
     ${maliyetSatiri(v.id)}
     ${v.hook ? `<div class="alt">Ekran yazısı: <b>${esc(v.hook)}</b></div>` : ""}
     ${duzeltme ? `<div class="alt">🔎 ${duzeltme} bilgi düzeltmesi yapıldı</div>` : ""}
@@ -687,11 +688,16 @@ async function ayarlar() {
     <p class="ince">Video yüklenene kadar bizde bekler: başlığını, saatini, senaryosunu serbestçe değiştirebilirsin.</p>
   </div>
   <div class="kart"><h3>🧠 Konular ve yapay zekâ</h3>
-    <label>Konu kategorileri (her satır bir kategori)</label><textarea id="kategoriler">${esc(a.KATEGORILER.join("\n"))}</textarea>
-    <label>📝 Konu talimatın (isteğe bağlı — en öncelikli kural olur)</label>
+    <label>📚 Kanalın konu alanları (her satır bir alan)</label>
+    <p class="ince">Kanalın "menüsü": her zaman ilgi çeken (kalıcı) konular bu alanlardan seçilir. Alan eklersen kanal oraya da açılır.</p>
+    <textarea id="kategoriler">${esc(a.KATEGORILER.join("\n"))}</textarea>
+    <label>📝 Genel talimatın (isteğe bağlı)</label>
+    <p class="ince">Alan değil, <b>kural</b>: bütün konulara (güncel haberler dahil) uygulanır ve en önceliklidir. Neye ağırlık verilsin, nelerden kaçınılsın, nasıl bir ton olsun.</p>
     <textarea id="konuNotu" placeholder="ör. Uzay ve antik uygarlıklara ağırlık ver, hastalık konularından kaçın">${esc(a.KONU_NOTU || "")}</textarea>
-    <label>🎯 Yapılmasını istediğin konular (her satır bir konu — sıradaki Perşembe üretiminde önce bunlar yapılır, yapılanlar listeden silinir)</label>
+    <label>🎯 Yapılmasını istediğin belirli konular (her satır bir konu)</label>
+    <p class="ince">Tam olarak bu konuların videosu yapılır: sıradaki üretimde önce bunlar girer, yapılanlar listeden silinir. Hemen istiyorsan Videolar → ⚡ Yeni video yaptır.</p>
     <textarea id="ozelKonular" placeholder="ör. Çatalhöyük'te 9000 yıllık evler neden kapısızdı?">${esc((a.OZEL_KONULAR || []).join("\n"))}</textarea>
+    <label><input type="checkbox" id="talep" ${a.TALEP_KONTROLU !== false ? "checked" : ""}> 📈 Talep kontrolü: kalıcı konularda 3 kat aday üret, YouTube'da benzer Türkçe Shorts'ların izlenmesine bak, en çok izlenenleri seç</label>
     <label>Maliyet / kalite profili</label>
     <select id="profil">${secenek(a.MALIYET_PROFILI, [["ekonomik", "Ekonomik (~4-5 $/ay)"], ["dengeli", "Dengeli (~8-9 $/ay)"], ["kalite", "Kalite (~15 $/ay)"]])}</select>
     <label><input type="checkbox" id="dogrulama" ${a.BILGI_DOGRULAMA ? "checked" : ""}> Bilgileri internette doğrula</label>
@@ -884,7 +890,7 @@ async function ayarlar() {
       GUNLUK_YUKLEME_LIMITI: Math.min(6, Math.max(1, +$("#limit").value || 6)),
       YUKLEME_ONCEDEN_SAAT: +$("#onceden").value, URETIM_RITMI: $("#ritim").value,
       KATEGORILER: $("#kategoriler").value.split("\n").map(x => x.trim()).filter(Boolean),
-      KONU_NOTU: $("#konuNotu").value.trim(),
+      KONU_NOTU: $("#konuNotu").value.trim(), TALEP_KONTROLU: $("#talep").checked,
       OZEL_KONULAR: $("#ozelKonular").value.split("\n").map(x => x.trim()).filter(Boolean),
       MALIYET_PROFILI: $("#profil").value, BILGI_DOGRULAMA: $("#dogrulama").checked, OTOMATIK_ONAY: $("#otoOnay").checked,
       ONAY_MODU: $("#onayModu").value,
