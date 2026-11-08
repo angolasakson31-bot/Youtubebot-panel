@@ -85,7 +85,7 @@ const SCOPES = ["https://www.googleapis.com/auth/youtube.upload",
                 "https://www.googleapis.com/auth/youtube.force-ssl"];  // youtube_yetki.py SCOPES ile aynı olmalı
 // ayarlar.py'deki varsayılanların aynısı (ayarlar.json yoksa bunlar gösterilir)
 const VARSAYILAN_AYARLAR = {
-  YAYINLANMA_SAATLERI: ["12:00", "20:00"], TREND_GUNLERI: [3, 4, 5, 6],
+  YAYINLANMA_SAATLERI: ["13:00", "20:00"], TREND_GUNLERI: [3, 4, 5, 6],
   KATEGORILER: ["bilimin açıklayamadığı gizemli olaylar", "uzay ve evrenin akıl almaz gerçekleri",
     "insan beyninin karanlık sırları", "tarihin gizli kalmış olayları",
     "hayvanların inanılmaz ve bilinmeyen yetenekleri", "teknolojinin gelecekte yapacağı şaşırtıcı şeyler",
@@ -94,7 +94,7 @@ const VARSAYILAN_AYARLAR = {
   TTS_SES: "tr-TR-AhmetNeural", TTS_HIZ: "+10%", SES_MOTORU: "edge", ELEVENLABS_SES: "75SIZa3vvET95PHhf1yD", KARARTMA: 0.35, VIDEO_KLIP_ONCELIKLI: true,
   ALTYAZI_BOYUT: 96, ALTYAZI_KELIME: 3, HOOK_SURE: 2.8, HOOK_BOYUT: 100,
   GORSEL_CESITLILIK: true, SERI_ETIKETI: true, FON_MUZIGI: true, MUZIK_SESI: 0.16, OTOMATIK_YORUM: true,
-  IZIN_SURESIZ: false, KONU_NOTU: "", OZEL_KONULAR: [], YUKLEME_ONCEDEN_SAAT: 30, EK_SAGLAYICILAR: [], GOREV_MODELLERI: {},
+  IZIN_SURESIZ: false, KONU_NOTU: "", OZEL_KONULAR: [], YUKLEME_ONCEDEN_SAAT: 30, URETIM_RITMI: "gunluk", EK_SAGLAYICILAR: [], GOREV_MODELLERI: {},
   SES_EK_MODEL: "", SES_EK_SES: "alloy", SES_EK_FIYAT: 15, ELEVENLABS_MODEL: "eleven_multilingual_v2", ELEVENLABS_BITIS: "",
   GORSEL_KAYNAKLARI: ["pexels_video", "pixabay_video", "pexels_foto", "pixabay_foto"],
   GORSEL_EK_MODEL: "", GORSEL_EK_BOYUT: "1024x1536", GORSEL_EK_FIYAT: 0.04,
@@ -292,7 +292,7 @@ const GRUP = {
   zamanli: ["⏰ YouTube'a yüklendi (gizli) — saati gelince kendiliğinden yayınlanacak", "yuk"],
   sirada:  ["📤 Hazır — yayınına yakın YouTube'a yüklenecek (11:07), saatinde yayınlanacak", ""],
   onay:    ["👀 Onayını bekliyor", "hazir"],
-  uretim:  ["🎬 Üretilecek (Perşembe üretiminde)", ""],
+  uretim:  ["🎬 Üretilecek (yayın günü sabahı)", ""],
   red:     ["❌ Reddedildi", "red"],
 };
 let BEKLEYEN = [], YORUMLAR = {}, VIDEO_MALIYET = {};
@@ -333,7 +333,7 @@ async function videolar() {
       <div><b style="font-size:22px">${say("sirada") + say("onay")}</b><div class="alt">📤 yüklenecek</div></div>
       <div><b style="font-size:22px">${say("uretim")}</b><div class="alt">🎬 üretilecek</div></div></div>
     <details style="margin-top:8px"><summary class="alt">ℹ️ Bir video nasıl yayınlanır?</summary><ol class="alt">
-      <li><b>Perşembe</b>: konu → senaryo → ses → video üretilir, panelde hemen <b>▶️ İzle</b> ile görünür.</li>
+      <li><b>Her sabah 07:17</b>: o günün konuları seçilir (güncel haberler + kanalın öğrendikleri) → senaryo → ses → video; panelde <b>▶️ İzle</b> ile görünür.</li>
       <li>Onay modu "otomatik" ise hemen onaylanır ve YouTube'a <b>gizli + zamanlanmış</b> olarak yüklenir (kota dolarsa ertesi gün 11:07).</li>
       <li>Yayın saati gelince YouTube videoyu <b>kendiliğinden herkese açar</b>. O ana kadar başlığını, saatini değiştirebilir, silebilir ya da hemen yayınlayabilirsin.</li>
       <li>YouTube'a gitmeden önce bakmak istersen Ayarlar → Onay modu → "Pazar" ya da "Elle".</li></ol></details></div>
@@ -678,6 +678,9 @@ async function ayarlar() {
     <div class="gunler">${GUN_ADLARI.map((g, i) => `<label><input type="checkbox" data-gun="${i}" ${a.TREND_GUNLERI.includes(i) ? "checked" : ""}>${g}</label>`).join("")}</div>
     <label>Günlük en fazla YouTube yüklemesi (kota: en fazla 6)</label>
     <input type="number" id="limit" min="1" max="6" value="${esc(a.GUNLUK_YUKLEME_LIMITI)}">
+    <label>Videolar ne zaman üretilsin?</label>
+    <select id="ritim">${secenek(a.URETIM_RITMI, [["gunluk", "Her sabah o günün videoları (konular taze, beklemez)"],
+      ["haftalik", "Haftada bir, Perşembe 14 video birden"]])}</select>
     <label>Videolar YouTube'a ne zaman yüklensin?</label>
     <select id="onceden">${secenek(String(a.YUKLEME_ONCEDEN_SAAT), [["30", "Yayından ~1 gün önce (önerilen, güvenlik payı var)"],
       ["14", "Sadece yayın günü sabahı (11:07)"], ["0", "Onaylanınca hemen hepsi (YouTube'da gizli sırada bekler)"]])}</select>
@@ -879,7 +882,7 @@ async function ayarlar() {
       YAYINLANMA_SAATLERI: saatler,
       TREND_GUNLERI: [...document.querySelectorAll("[data-gun]")].filter(x => x.checked).map(x => +x.dataset.gun),
       GUNLUK_YUKLEME_LIMITI: Math.min(6, Math.max(1, +$("#limit").value || 6)),
-      YUKLEME_ONCEDEN_SAAT: +$("#onceden").value,
+      YUKLEME_ONCEDEN_SAAT: +$("#onceden").value, URETIM_RITMI: $("#ritim").value,
       KATEGORILER: $("#kategoriler").value.split("\n").map(x => x.trim()).filter(Boolean),
       KONU_NOTU: $("#konuNotu").value.trim(),
       OZEL_KONULAR: $("#ozelKonular").value.split("\n").map(x => x.trim()).filter(Boolean),
