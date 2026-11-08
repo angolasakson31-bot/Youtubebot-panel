@@ -722,8 +722,13 @@ async function ayarlar() {
     <p class="ince">Seçilen ses hata verir ya da kotası biterse o video otomatik Edge sesiyle üretilir.</p>
     <label>Edge sesi</label><select id="ses">${secenek(a.TTS_SES, [["tr-TR-AhmetNeural", "Ahmet (erkek)"], ["tr-TR-EmelNeural", "Emel (kadın)"]])}</select>
     <label>Konuşma hızı</label><select id="hiz">${secenek(a.TTS_HIZ, [["+0%", "Normal"], ["+5%", "+%5"], ["+10%", "+%10"], ["+15%", "+%15"], ["+20%", "+%20"]])}</select>
+  </div>
+  <div class="kart"><h3>🌓 Görüntü karartma</h3>
     <label>Karartma: <b id="kVal">${Math.round(a.KARARTMA * 100)}%</b></label>
     <input type="range" id="karartma" min="0" max="60" value="${Math.round(a.KARARTMA * 100)}">
+    <p class="ince">Arka plandaki video / fotoğraf ne kadar karartılsın. Koyu görüntü kanala gizemli bir hava verir ve beyaz altyazıyı okunur kılar.
+      %0 = hiç karartma yok (canlı, ama altyazı zor okunabilir), %35 = önerilen, %60 = çok koyu.
+      "Her videoda farklı stil" açıksa her video bu değerin ±%6 yakınında olur.</p>
   </div>
   <div class="kart"><h3>🖼️ Görüntü kaynakları</h3>
     <p class="alt">Her sahne için yukarıdan aşağı denenir; ilk bulunan kullanılır. ▲▼ ile sırala, kutuyla aç/kapa.</p>
