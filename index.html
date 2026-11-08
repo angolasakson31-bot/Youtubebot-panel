@@ -295,7 +295,18 @@ const GRUP = {
   uretim:  ["🎬 Üretilecek (Perşembe üretiminde)", ""],
   red:     ["❌ Reddedildi", "red"],
 };
-let BEKLEYEN = [], YORUMLAR = {};
+let BEKLEYEN = [], YORUMLAR = {}, VIDEO_MALIYET = {};
+const IS_ADLARI = {senaryo: "senaryo", hook_secimi: "açılış seçimi", dogrulama: "bilgi doğrulama", detaylar: "başlık/görsel",
+  seri_yorum: "seri+yorum", ai_gorsel: "yapay zekâ görseli", seslendirme: "ek ses"};
+function maliyetSatiri(id) {
+  const m = VIDEO_MALIYET[id];
+  if (!m) return "";
+  const kur = 34;   // yaklaşık TL karşılığı için (bilgi amaçlı)
+  const dokum = Object.entries(m.isler).sort((a, b) => b[1] - a[1])
+    .map(([k, u]) => `${esc(IS_ADLARI[k] || k)} ${u.toFixed(3)} $`).join(" · ");
+  return `<details class="ince" style="margin-top:4px"><summary>💰 ${m.usd.toFixed(3)} $ (~${(m.usd * kur).toFixed(1)} ₺)${m.kredi ? ` · 🎙️ ${m.kredi} ElevenLabs kredisi` : ""}</summary>
+    ${dokum || "—"}<br>🔤 ${(m.giris / 1000).toFixed(1)}K giriş + ${(m.cikis / 1000).toFixed(1)}K çıkış token${m.arama ? ` · 🔎 ${m.arama} arama` : ""}</details>`;
+}
 function bekleyenVar(id) {
   return BEKLEYEN.some(i => i.id === id || String(i.hemen || "").split(",").includes(id) || String(i.reddet || "").split(",").includes(id)
     || String(i.onayla || "").split(",").includes(id) || (i.duzenle || []).some(d => d.id === id));
@@ -304,7 +315,16 @@ let VIDEO_FILTRE = (() => { try { return localStorage.getItem("ytb_filtre") || "
 
 async function videolar() {
   $("#ana").innerHTML = `<p class="alt">Yükleniyor…</p>`;
-  [PLAN, BEKLEYEN, YORUMLAR] = await Promise.all([dosyaOku("haftalik_plan.json", []), bekleyenIstekler(), dosyaOku("yorumlar.json", {})]);
+  let maliyet;
+  [PLAN, BEKLEYEN, YORUMLAR, maliyet] = await Promise.all([dosyaOku("haftalik_plan.json", []), bekleyenIstekler(),
+    dosyaOku("yorumlar.json", {}), dosyaOku("maliyet.json", [])]);
+  VIDEO_MALIYET = {};
+  for (const k of (Array.isArray(maliyet) ? maliyet : [])) {
+    if (!k.video) continue;
+    const m = VIDEO_MALIYET[k.video] = VIDEO_MALIYET[k.video] || {usd: 0, kredi: 0, giris: 0, cikis: 0, arama: 0, isler: {}};
+    m.usd += k.usd || 0; m.kredi += k.kredi || 0; m.giris += k.giris || 0; m.cikis += k.cikis || 0; m.arama += k.arama || 0;
+    if (k.usd) m.isler[k.is] = (m.isler[k.is] || 0) + k.usd;
+  }
   if (!PLAN.length) { $("#ana").innerHTML = `<div class="kart">Henüz video yok.</div>`; return; }
   const say = g => PLAN.filter(v => videoGrubu(v) === g).length;
   let html = `<div class="kart"><div class="satir" style="text-align:center">
@@ -397,6 +417,7 @@ function videoKarti(v) {
     ${v.elle_duzenlendi ? `<span class="rozet">✏️ elle düzenlendi</span>` : ""}
     ${v.yorum_id || (YORUMLAR || {})[v.id] ? `<span class="rozet">💬 yorum atıldı</span>` : ""}
     ${v.baslik && v.konu !== v.baslik ? `<div class="alt" style="margin-top:6px">Konu: ${esc(v.konu)}</div>` : ""}
+    ${maliyetSatiri(v.id)}
     ${v.hook ? `<div class="alt">Ekran yazısı: <b>${esc(v.hook)}</b></div>` : ""}
     ${duzeltme ? `<div class="alt">🔎 ${duzeltme} bilgi düzeltmesi yapıldı</div>` : ""}
     ${cumleler ? `<details><summary>Senaryo</summary><blockquote>${cumleler}</blockquote>
@@ -926,6 +947,15 @@ async function istatistik() {
     ${Object.entries(isler).sort((a, b) => b[1] - a[1]).map(([is, usd]) => `
       <div style="margin-top:10px"><div class="satir"><span>${esc(is)}</span><span style="text-align:right">${usd.toFixed(3)} $</span></div>
       <div class="cubuk"><i style="width:${100 * usd / enBuyukIs}%"></i></div></div>`).join("")}
+    ${(() => {
+      const son = (maliyet || []).filter(k => k.video && simdi - new Date(k.zaman) < 30 * gun);
+      const vids = new Set(son.map(k => k.video));
+      if (!vids.size) return "";
+      const usd = son.reduce((t, k) => t + (k.usd || 0), 0), kredi = son.reduce((t, k) => t + (k.kredi || 0), 0);
+      return `<div class="satir" style="margin-top:10px"><div><div class="alt">Video başına ortalama</div><b>${(usd / vids.size).toFixed(3)} $</b></div>
+        <div><div class="alt">ElevenLabs / video</div><b>${Math.round(kredi / vids.size)} kredi</b></div></div>
+        <p class="ince">Konu bulma ve haftalık analiz gibi ortak işler video başına sayılmaz (haftada ~0,05-0,10 $).</p>`;
+    })()}
     <p class="ince">Gerçek fatura: Anthropic Console → Usage.</p></div>`;
   const liste = l => (l || []).map(x => `<li>${esc(x)}</li>`).join("");
   html += st && st.ozet ? `<div class="kart"><h3>🧠 Sistemin öğrendikleri</h3>
