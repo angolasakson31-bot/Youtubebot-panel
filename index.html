@@ -414,6 +414,8 @@ function videoKarti(v) {
     ${bekleyenVar(v.id) ? `<span class="rozet hazir">⏳ isteğin sırada (birkaç dk)</span>` : ""}
     ${v.hemen_yayinla_istek ? `<span class="rozet">🚀 hemen yayına alınacak</span>` : ""}
     ${v.silinecek ? `<span class="rozet red">🗑️ YouTube'dan silinecek</span>` : ""}
+    ${(v.kalite_hatasi || []).length ? `<span class="rozet red">🚫 kalite kontrolünden geçmedi</span><p class="ince">${esc(v.kalite_hatasi.join(" · "))} — ${v.durum === "reddedildi" ? "yayınlanmadı; 🔁 ile yeniden ürettirebilirsin." : "sıradaki çalışmada yeniden üretilecek."}</p>` : ""}
+    ${(v.kalite_uyari || []).length ? `<p class="ince">🔎 Kalite notu: ${esc(v.kalite_uyari.join(" · "))}</p>` : ""}
     ${v.elle_duzenlendi ? `<span class="rozet">✏️ elle düzenlendi</span>` : ""}
     ${v.yorum_id || (YORUMLAR || {})[v.id] ? `<span class="rozet">💬 yorum atıldı</span>` : ""}
     ${v.baslik && v.konu !== v.baslik ? `<div class="alt" style="margin-top:6px">Konu: ${esc(v.konu)}</div>` : ""}
@@ -974,6 +976,14 @@ async function istatistik() {
         <p class="ince">Konu bulma ve haftalık analiz gibi ortak işler video başına sayılmaz (haftada ~0,05-0,10 $).</p>`;
     })()}
     <p class="ince">Gerçek fatura: Anthropic Console → Usage.</p></div>`;
+  if (perf && perf.analytics && perf.analytics !== "var") {
+    const neden = {
+      api_kapali: `Google Cloud projesinde <b>YouTube Analytics API</b> açık değil. <a href="https://console.cloud.google.com/apis/library/youtubeanalytics.googleapis.com" target="_blank">Bu sayfayı aç</a> → doğru projeyi seç → <b>Enable / Etkinleştir</b>. Bir kere yapman yeter.`,
+      izin_yok: `YouTube izninde istatistik yetkisi yok. <b>YouTube izni</b> sekmesinden izni bir kez yenile.`,
+    }[perf.analytics] || `Sebep: ${esc(perf.analytics_hata || "bilinmiyor (sıradaki üretimde belli olacak)")}`;
+    html += `<div class="kart"><h3>⚠️ "Videonun yüzde kaçı izlendi" verisi gelmiyor</h3>
+      <p class="alt">Bu veri olmadan sistem hangi açılışın izleyiciyi tuttuğunu öğrenemez.</p><p>${neden}</p></div>`;
+  }
   const liste = l => (l || []).map(x => `<li>${esc(x)}</li>`).join("");
   html += st && st.ozet ? `<div class="kart"><h3>🧠 Sistemin öğrendikleri</h3>
       <p class="ince">${esc(st.tarih)} · ${esc(st.video_sayisi)} video analiz edildi · her Perşembe yenilenir</p>
