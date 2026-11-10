@@ -769,6 +769,17 @@ async function ayarlar() {
     <p class="alt">Her işi hangi yapay zekânın yapacağını seç. "Varsayılan" = yukarıdaki maliyet profili (Claude).
       Ek sağlayıcı hata verirse o iş otomatik Claude ile yapılır, video üretimi durmaz.</p>
     <div id="gorevler"></div>
+    <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--cizgi, #333)">
+      <label>🖼️ Sahne görselleri (yapay zekâ ile üretim)</label>
+      <select id="gorevGorsel"></select>
+      <div id="gorevGorselNe" style="display:none"><label>Ne zaman üretilsin?</label>
+        <select id="gorevGorselSira">
+          <option value="yedek">Sadece stok / NASA görüntüsü bulunamazsa (ucuz)</option>
+          <option value="hepsi">Her sahnede (video başına ~6 görsel)</option>
+        </select></div>
+      <p class="ince">Kapalıyken görüntüler Pexels / NASA / Wikimedia'dan gelir (ücretsiz). Görsel üretebilen bir sağlayıcı eklediğinde
+        modelleri burada çıkar. Bu seçim aşağıdaki 🖼️ Görüntü kaynakları kartıyla aynı ayardır.</p>
+    </div>
     <details style="margin-top:12px"><summary><b>➕ Ek yapay zekâ sağlayıcıları</b> <span class="alt">(DeepSeek, Gemini, OpenRouter, Groq…)</span></summary>
       <ol class="alt">
         <li>Sağlayıcının sitesinden API anahtarı al.</li>
@@ -840,8 +851,29 @@ async function ayarlar() {
       el.innerHTML = l.map(([k, t]) => `<option value="${esc(k)}" ${k === v ? "selected" : ""}>${esc(t)}</option>`).join(""); };
     ekSec("#sesEkModel", a.SES_EK_MODEL, /tts|speech|audio|voice|sonic/i);
     ekSec("#gorselEkModel", a.GORSEL_EK_MODEL, /image|dall|imagen|flux|diffusion|sdxl|recraft|ideogram/i);
+    gorselGorevCiz();
     $("#gorevler").innerHTML = Object.entries(GOREVLER).map(([k, ad]) => `<label>${esc(ad)}</label>
       <select data-gorev="${k}">${[...secenekler, ...(gorevSecim[k] && !secenekler.some(([v]) => v === gorevSecim[k]) ? [[gorevSecim[k], gorevSecim[k] + " (listede yok)"]] : [])].map(([v, t]) => `<option value="${esc(v)}" ${(gorevSecim[k] || "") === v ? "selected" : ""}>${esc(t)}</option>`).join("")}</select>`).join("");
+  };
+  // "Yapay zekâ modelleri" kartındaki görsel satırı = görüntü kaynakları kartındaki model + ai_gorsel sırası
+  const gorselGorevCiz = () => {
+    const kaynak = $("#gorselEkModel"), el = $("#gorevGorsel");
+    const acik = kaynakSira.includes("ai_gorsel");
+    el.innerHTML = `<option value="">Kapalı — stok / NASA / Wikimedia görüntüsü (ücretsiz)</option>` +
+      [...kaynak.options].filter(o => o.value).map(o => `<option value="${esc(o.value)}" ${acik && o.value === kaynak.value ? "selected" : ""}>${esc(o.textContent)}</option>`).join("") +
+      `<option disabled>☁️ Cloudflare FLUX (ücretsiz) — hesabını açınca eklenecek</option>`;
+    if (!acik) el.value = "";
+    $("#gorevGorselNe").style.display = el.value ? "" : "none";
+    $("#gorevGorselSira").value = kaynakSira[0] === "ai_gorsel" ? "hepsi" : "yedek";
+  };
+  const gorselGorevUygula = () => {
+    const model = $("#gorevGorsel").value;
+    kaynakSira = kaynakSira.filter(k => k !== "ai_gorsel");
+    if (model) {
+      $("#gorselEkModel").value = model;
+      if ($("#gorevGorselSira").value === "hepsi") kaynakSira.unshift("ai_gorsel"); else kaynakSira.push("ai_gorsel");
+    }
+    kaynakCiz();
   };
   let kaynakSira = [...(a.GORSEL_KAYNAKLARI || [])].filter(k => k in GORSEL_KAYNAK_ADLARI);
   const kaynakCiz = () => {
@@ -858,8 +890,12 @@ async function ayarlar() {
     document.querySelectorAll("[data-yukari]").forEach(b => b.onclick = () => tasi(b.dataset.yukari, -1));
     document.querySelectorAll("[data-asagi]").forEach(b => b.onclick = () => tasi(b.dataset.asagi, 1));
     $("#gorselEk").style.display = kaynakSira.includes("ai_gorsel") ? "" : "none";
+    if ($("#gorevGorsel")) gorselGorevCiz();
   };
   kaynakCiz();
+  $("#gorevGorsel").onchange = gorselGorevUygula;
+  $("#gorevGorselSira").onchange = gorselGorevUygula;
+  $("#gorselEkModel").addEventListener("change", gorselGorevCiz);
   $("#motor").onchange = e => $("#sesEk").style.display = e.target.value === "ek" ? "" : "none";
   const anahtarCiz = async () => {
     let d;
