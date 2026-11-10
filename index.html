@@ -94,7 +94,7 @@ const VARSAYILAN_AYARLAR = {
   TTS_SES: "tr-TR-AhmetNeural", TTS_HIZ: "+10%", SES_MOTORU: "edge", ELEVENLABS_SES: "75SIZa3vvET95PHhf1yD", KARARTMA: 0.35, VIDEO_KLIP_ONCELIKLI: true,
   ALTYAZI_BOYUT: 96, ALTYAZI_KELIME: 3, HOOK_SURE: 2.8, HOOK_BOYUT: 100,
   GORSEL_CESITLILIK: true, SERI_ETIKETI: true, FON_MUZIGI: true, MUZIK_SESI: 0.16, OTOMATIK_YORUM: true,
-  IZIN_SURESIZ: false, KONU_NOTU: "", SENARYO_NOTU: "", GORSEL_NOTU: "", OZEL_KONULAR: [], YUKLEME_ONCEDEN_SAAT: 30, URETIM_RITMI: "gunluk", TALEP_KONTROLU: true, EK_SAGLAYICILAR: [], GOREV_MODELLERI: {},
+  IZIN_SURESIZ: false, KONU_NOTU: "", SENARYO_NOTU: "", GORSEL_NOTU: "", CLOUDFLARE_HESAP: "", OZEL_KONULAR: [], YUKLEME_ONCEDEN_SAAT: 30, URETIM_RITMI: "gunluk", TALEP_KONTROLU: true, EK_SAGLAYICILAR: [], GOREV_MODELLERI: {},
   SES_EK_MODEL: "", SES_EK_SES: "alloy", SES_EK_FIYAT: 15, ELEVENLABS_MODEL: "eleven_multilingual_v2", ELEVENLABS_BITIS: "",
   GORSEL_KAYNAKLARI: ["pexels_video", "pixabay_video", "pexels_foto", "pixabay_foto"],
   OZEL_KAYNAKLAR: true,
@@ -777,12 +777,18 @@ async function ayarlar() {
           <option value="yedek">Sadece stok / NASA görüntüsü bulunamazsa (ucuz)</option>
           <option value="hepsi">Her sahnede (video başına ~6 görsel)</option>
         </select></div>
+      <div id="cfAlan" style="display:none;margin-top:8px">
+        <label>☁️ Cloudflare hesap numarası (Account ID)</label>
+        <input id="cfHesap" autocomplete="off" placeholder="32 haneli harf/rakam, ör. 1a2b3c..." value="${esc(a.CLOUDFLARE_HESAP || "")}">
+        <p class="ince">Cloudflare → AI → Workers AI → <b>Use REST API</b> sayfasındaki <b>Account ID</b>. Gizli değil, buraya yapıştır.
+          Anahtarı (token) ise aşağıdaki <b>🔑 API anahtarları</b> kartında <b>Cloudflare</b> satırına gir. Sonra İşler → 🔑 Anahtar testi.</p>
+      </div>
       <label>🎨 Görsel talimatın (isteğe bağlı)</label>
       <p class="ince">Görseller nasıl olsun? Yapay zekâ görsel üretirken bu tarife uyar. Kapalıyken de boşa gitmez:
         stok / NASA görüntüsü aranırken arama kelimeleri buna göre seçilir.</p>
       <textarea id="gorselNotu" placeholder="ör. Gerçekçi belgesel fotoğrafı, koyu ve gizemli, sinematik ışık; insan yüzü gösterme, çizgi film olmasın">${esc(a.GORSEL_NOTU || "")}</textarea>
       <p class="ince">Kapalıyken görüntüler Pexels / NASA / Wikimedia'dan gelir (ücretsiz). Görsel üretebilen bir sağlayıcı eklediğinde
-        modelleri burada çıkar. Bu seçim aşağıdaki 🖼️ Görüntü kaynakları kartıyla aynı ayardır.</p>
+        modelleri burada çıkar. ☁️ Cloudflare ücretsizdir (hesap numarası + anahtar ister). Bu seçim aşağıdaki 🖼️ Görüntü kaynakları kartıyla aynı ayardır.</p>
     </div>
     <details style="margin-top:12px"><summary><b>➕ Ek yapay zekâ sağlayıcıları</b> <span class="alt">(DeepSeek, Gemini, OpenRouter, Groq…)</span></summary>
       <ol class="alt">
@@ -849,12 +855,13 @@ async function ayarlar() {
     // Ses / görsel listesi: elle yazılan modeller + sağlayıcıda bulunan, işe uygun adlı modeller (otomatik)
     const uygunlar = desen => liste.flatMap(sg => ((bulunan && bulunan.ek && bulunan.ek[sg.yuva]) || [])
       .filter(m => desen.test(m) && !sg.modeller.includes(m)).map(m => [`ek${sg.yuva}:${m}`, `${sg.ad} · ${m}`]));
-    const ekSec = (id, deger, desen) => { const el = $(id); const v = el.options.length ? el.value : (deger || "");
-      const l = [["", "— seç —"], ...uygunlar(desen), ...ekler];
+    const ekSec = (id, deger, desen, basta = []) => { const el = $(id); const v = el.options.length ? el.value : (deger || "");
+      const l = [["", "— seç —"], ...basta, ...uygunlar(desen), ...ekler];
       if (v && !l.some(([k]) => k === v)) l.push([v, v]);
       el.innerHTML = l.map(([k, t]) => `<option value="${esc(k)}" ${k === v ? "selected" : ""}>${esc(t)}</option>`).join(""); };
     ekSec("#sesEkModel", a.SES_EK_MODEL, /tts|speech|audio|voice|sonic/i);
-    ekSec("#gorselEkModel", a.GORSEL_EK_MODEL, /image|dall|imagen|flux|diffusion|sdxl|recraft|ideogram/i);
+    ekSec("#gorselEkModel", a.GORSEL_EK_MODEL, /image|dall|imagen|flux|diffusion|sdxl|recraft|ideogram/i,
+          [["cloudflare:@cf/black-forest-labs/flux-1-schnell", "☁️ Cloudflare · FLUX schnell (ücretsiz günlük kota)"]]);
     gorselGorevCiz();
     $("#gorevler").innerHTML = Object.entries(GOREVLER).map(([k, ad]) => `<label>${esc(ad)}</label>
       <select data-gorev="${k}">${[...secenekler, ...(gorevSecim[k] && !secenekler.some(([v]) => v === gorevSecim[k]) ? [[gorevSecim[k], gorevSecim[k] + " (listede yok)"]] : [])].map(([v, t]) => `<option value="${esc(v)}" ${(gorevSecim[k] || "") === v ? "selected" : ""}>${esc(t)}</option>`).join("")}</select>`).join("");
@@ -864,10 +871,10 @@ async function ayarlar() {
     const kaynak = $("#gorselEkModel"), el = $("#gorevGorsel");
     const acik = kaynakSira.includes("ai_gorsel");
     el.innerHTML = `<option value="">Kapalı — stok / NASA / Wikimedia görüntüsü (ücretsiz)</option>` +
-      [...kaynak.options].filter(o => o.value).map(o => `<option value="${esc(o.value)}" ${acik && o.value === kaynak.value ? "selected" : ""}>${esc(o.textContent)}</option>`).join("") +
-      `<option disabled>☁️ Cloudflare FLUX (ücretsiz) — hesabını açınca eklenecek</option>`;
+      [...kaynak.options].filter(o => o.value).map(o => `<option value="${esc(o.value)}" ${acik && o.value === kaynak.value ? "selected" : ""}>${esc(o.textContent)}</option>`).join("");
     if (!acik) el.value = "";
     $("#gorevGorselNe").style.display = el.value ? "" : "none";
+    $("#cfAlan").style.display = el.value.startsWith("cloudflare:") ? "" : "none";
     $("#gorevGorselSira").value = kaynakSira[0] === "ai_gorsel" ? "hepsi" : "yedek";
   };
   const gorselGorevUygula = () => {
@@ -907,7 +914,7 @@ async function ayarlar() {
     if (!d.kurulu) { $("#anahtarlar").innerHTML = `<div class="uyari">Kasa henüz kurulmadı. <b>İşler → 🔑 Anahtar testi</b>'ni bir kez çalıştır (1-2 dk), sonra bu sayfayı yenile.</div>`; return; }
     const saglayiciAdi = no => ((a.EK_SAGLAYICILAR || []).find(x => +x.yuva === no) || {}).ad;
     const satirlar = [["CLAUDE_API_KEY", "Claude (Anthropic)"], ["ELEVENLABS_API_KEY", "ElevenLabs"], ["PEXELS_API_KEY", "Pexels"],
-      ["PIXABAY_API_KEY", "Pixabay"], ...[1, 2, 3].map(n => [`EK_API_KEY_${n}`, `Sağlayıcı ${n}${saglayiciAdi(n) ? " · " + saglayiciAdi(n) : ""}`])];
+      ["PIXABAY_API_KEY", "Pixabay"], ["CLOUDFLARE_API_KEY", "Cloudflare (görsel)"], ...[1, 2, 3].map(n => [`EK_API_KEY_${n}`, `Sağlayıcı ${n}${saglayiciAdi(n) ? " · " + saglayiciAdi(n) : ""}`])];
     $("#anahtarlar").innerHTML = satirlar.map(([ad, etiket]) => {
       const var_ = d.adlar.includes(ad);
       return `<div style="margin:10px 0"><div><b>${esc(etiket)}</b> <span class="rozet ${var_ ? "onay" : ""}">${var_ ? "✅ panelden eklendi" : "GitHub secret'ı (varsa)"}</span></div>
@@ -942,7 +949,7 @@ async function ayarlar() {
       GUNLUK_YUKLEME_LIMITI: Math.min(6, Math.max(1, +$("#limit").value || 6)),
       YUKLEME_ONCEDEN_SAAT: +$("#onceden").value, URETIM_RITMI: $("#ritim").value,
       KATEGORILER: $("#kategoriler").value.split("\n").map(x => x.trim()).filter(Boolean),
-      KONU_NOTU: $("#konuNotu").value.trim(), TALEP_KONTROLU: $("#talep").checked, SENARYO_NOTU: $("#senaryoNotu").value.trim(), GORSEL_NOTU: $("#gorselNotu").value.trim(),
+      KONU_NOTU: $("#konuNotu").value.trim(), TALEP_KONTROLU: $("#talep").checked, SENARYO_NOTU: $("#senaryoNotu").value.trim(), GORSEL_NOTU: $("#gorselNotu").value.trim(), CLOUDFLARE_HESAP: $("#cfHesap").value.trim(),
       OZEL_KONULAR: $("#ozelKonular").value.split("\n").map(x => x.trim()).filter(Boolean),
       MALIYET_PROFILI: $("#profil").value, BILGI_DOGRULAMA: $("#dogrulama").checked, OTOMATIK_ONAY: $("#otoOnay").checked,
       ONAY_MODU: $("#onayModu").value,
@@ -968,6 +975,9 @@ async function ayarlar() {
     if (!yeni.KATEGORILER.length) return bildir("En az bir kategori olmalı.");
     if (!yeni.GORSEL_KAYNAKLARI.length) return bildir("En az bir görüntü kaynağı açık olmalı.");
     if (yeni.GORSEL_KAYNAKLARI.includes("ai_gorsel") && !yeni.GORSEL_EK_MODEL) return bildir("Yapay zekâ görseli için model seç (önce sağlayıcı ekle).", 5000);
+    if (yeni.CLOUDFLARE_HESAP && !/^[0-9a-zA-Z]{16,64}$/.test(yeni.CLOUDFLARE_HESAP)) return bildir("Cloudflare hesap numarası sadece harf ve rakamdan oluşmalı (32 hane).", 5000);
+    if (yeni.GORSEL_KAYNAKLARI.includes("ai_gorsel") && yeni.GORSEL_EK_MODEL.startsWith("cloudflare:") && !yeni.CLOUDFLARE_HESAP)
+      return bildir("Cloudflare için hesap numarasını (Account ID) gir.", 5000);
     if (yeni.SES_MOTORU === "ek" && !yeni.SES_EK_MODEL) return bildir("Ek sağlayıcı sesi için model seç.", 5000);
     $("#ayarKaydet").disabled = true;
     try {
