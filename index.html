@@ -111,6 +111,15 @@ const GOREVLER = {
   senaryo: "Senaryo yazımı", hook_secimi: "Açılış (hook) seçimi", dogrulama: "Bilgi doğrulama (internet araması ister)",
   detaylar: "Başlık / açıklama / görsel kelimeler", seri_yorum: "Seri + yorum (eski videolar)", strateji: "Haftalık öğrenme analizi",
 };
+// Panelde "⛔ Yapma" seçilebilen işler (ortak.KAPATILABILIR_GOREVLER ile aynı)
+const KAPATILABILIR = new Set(["guncel_konular", "hook_secimi", "dogrulama", "seri_yorum", "strateji"]);
+const GOREV_KAPALI_NOTU = {
+  guncel_konular: "internette haber aranmaz, bütün videolar kalıcı (evergreen) konulardan olur",
+  hook_secimi: "açılış yarışması yapılmaz, ilk yazılan açılış kullanılır",
+  dogrulama: "bilgiler internette kontrol edilmez (daha ucuz, ama hata kaçabilir)",
+  seri_yorum: "eski videolara seri ve yorum eklenmez",
+  strateji: "haftalık öğrenme yapılmaz, sistem performanstan ders çıkarmaz",
+};
 const CLAUDE_MODELLERI = [["claude-opus-5-5", "Claude Opus 5.5 (en iyi, pahalı)"], ["claude-sonnet-5-5", "Claude Sonnet 5.5 (orta)"],
                           ["claude-haiku-5-5", "Claude Haiku 5.5 (en ucuz)"]];
 const HAZIR_SAGLAYICILAR = {
@@ -706,7 +715,6 @@ async function ayarlar() {
     <label><input type="checkbox" id="talep" ${a.TALEP_KONTROLU !== false ? "checked" : ""}> 📈 Talep kontrolü: kalıcı konularda 3 kat aday üret, YouTube'da benzer Türkçe Shorts'ların izlenmesine bak, en çok izlenenleri seç</label>
     <label>Maliyet / kalite profili</label>
     <select id="profil">${secenek(a.MALIYET_PROFILI, [["ekonomik", "Ekonomik (~4-5 $/ay)"], ["dengeli", "Dengeli (~8-9 $/ay)"], ["kalite", "Kalite (~15 $/ay)"]])}</select>
-    <label><input type="checkbox" id="dogrulama" ${a.BILGI_DOGRULAMA ? "checked" : ""}> Bilgileri internette doğrula</label>
     <label>Onay modu</label>
     <select id="onayModu">${secenek(a.ONAY_MODU, [["otomatik", "Tam otomatik — üretilir üretilmez yüklenir"], ["pazar", "Ben onaylarım, Pazar 20:00'de kalanlar otomatik"], ["elle", "Sadece ben onaylarım"]])}</select>
     <label><input type="checkbox" id="otoOnay" ${a.OTOMATIK_ONAY ? "checked" : ""}> (Pazar modunda) Pazar 20:00'de reddetmediklerimi otomatik onayla</label>
@@ -780,6 +788,11 @@ async function ayarlar() {
     <p class="alt">Her işi hangi yapay zekânın yapacağını seç. "Varsayılan" = yukarıdaki maliyet profili (Claude).
       Ek sağlayıcı hata verirse o iş otomatik Claude ile yapılır, video üretimi durmaz.</p>
     <div id="gorevler"></div>
+    <div class="uyari" style="margin-top:12px"><b>🧪 Test et</b>
+      <p class="ince">Seçtiğin yapay zekâların ve anahtarların çalışıp çalışmadığını dener (Claude, ek sağlayıcılar, Cloudflare görseli, Pexels, NASA…).
+        Önce 💾 Kaydet, sonra bu düğme. 1-2 dakika sürer, sonuç aşağıda çıkar.</p>
+      <button type="button" id="aiTest">🧪 Şimdi test et</button>
+      <div id="testSonuc" style="margin-top:8px"></div></div>
     <p class="ince">🖼️ Sahne görsellerini hangi yapay zekânın yapacağı aşağıdaki <b>🖼️ Görüntüler</b> kartında seçilir.</p>
     <details style="margin-top:12px"><summary><b>➕ Ek yapay zekâ sağlayıcıları</b> <span class="alt">(DeepSeek, Gemini, OpenRouter, Groq…)</span></summary>
       <ol class="alt">
@@ -839,6 +852,7 @@ async function ayarlar() {
     fiyat: [+k.querySelector(".sFg").value || 0, +k.querySelector(".sFc").value || 0],
   })).filter(s => s.ad && s.base_url && s.modeller.length);
   let gorevSecim = {...(a.GOREV_MODELLERI || {})};
+  if (a.BILGI_DOGRULAMA === false && !gorevSecim.dogrulama) gorevSecim.dogrulama = "kapali";
   const gorevCiz = liste => {
     document.querySelectorAll("[data-gorev]").forEach(x => gorevSecim[x.dataset.gorev] = x.value);
     const ekler = liste.flatMap(s => s.modeller.map(m => [`ek${s.yuva}:${m}`, `${s.ad} · ${m}`]));
@@ -854,8 +868,13 @@ async function ayarlar() {
     ekSec("#gorselEkModel", a.GORSEL_EK_MODEL, /image|dall|imagen|flux|diffusion|sdxl|recraft|ideogram/i,
           [["cloudflare:@cf/black-forest-labs/flux-1-schnell", "☁️ Cloudflare · FLUX schnell (ücretsiz günlük kota)"]]);
     gorselCiz();
-    $("#gorevler").innerHTML = Object.entries(GOREVLER).map(([k, ad]) => `<label>${esc(ad)}</label>
-      <select data-gorev="${k}">${[...secenekler, ...(gorevSecim[k] && !secenekler.some(([v]) => v === gorevSecim[k]) ? [[gorevSecim[k], gorevSecim[k] + " (listede yok)"]] : [])].map(([v, t]) => `<option value="${esc(v)}" ${(gorevSecim[k] || "") === v ? "selected" : ""}>${esc(t)}</option>`).join("")}</select>`).join("");
+    $("#gorevler").innerHTML = Object.entries(GOREVLER).map(([k, ad]) => {
+      const l = [...secenekler, ...(KAPATILABILIR.has(k) ? [["kapali", "⛔ Yapma (bu iş kapalı)"]] : [])];
+      if (gorevSecim[k] && !l.some(([v]) => v === gorevSecim[k])) l.push([gorevSecim[k], gorevSecim[k] + " (listede yok)"]);
+      return `<label>${esc(ad)}${KAPATILABILIR.has(k) ? "" : ' <span class="ince">(zorunlu)</span>'}</label>
+      <select data-gorev="${k}">${l.map(([v, t]) => `<option value="${esc(v)}" ${(gorevSecim[k] || "") === v ? "selected" : ""}>${esc(t)}</option>`).join("")}</select>
+      ${GOREV_KAPALI_NOTU[k] ? `<p class="ince" style="margin-top:2px">⛔ seçilirse: ${GOREV_KAPALI_NOTU[k]}</p>` : ""}`;
+    }).join("");
   };
   // Görüntüler: tek seçim → kaynak sırası (Pixabay anahtarı yoksa sistem onu kendisi atlar)
   const STOK = ["pexels_video", "pixabay_video", "pexels_foto", "pixabay_foto"];
@@ -868,8 +887,8 @@ async function ayarlar() {
     $("#cfAlan").style.display = cf ? "" : "none";
     $("#gorselEkAyar").style.display = model && !cf ? "" : "none";
     const ai = `🤖 Yapay zekâ${model ? " (" + esc(($("#gorselEkModel").selectedOptions[0] || {}).textContent || model) + ")" : " — yukarıdan seç"}`;
-    const adimlar = ["🛰️ NASA / Wikimedia — sadece uzay ve adı geçen belirli şeyler (gezegen, tardigrad, Tesla…)"];
-    if (mod === "ai") adimlar.push(ai);
+    const nasa = "🛰️ NASA / Wikimedia — sadece uzay ve adı geçen belirli şeyler (gezegen, tardigrad, Tesla…)";
+    const adimlar = mod === "ai" ? [ai, nasa] : [nasa];
     adimlar.push("🎬 Pexels video", "🖼️ Pexels fotoğraf");
     if (mod === "gercek") adimlar.push(ai);
     $("#gorselSira").innerHTML = adimlar.map(x => `<li>${x}</li>`).join("");
@@ -905,6 +924,30 @@ async function ayarlar() {
     });
   };
   anahtarCiz();
+  // 🧪 Test: anahtar_testi.json (Anahtar Testi işi yazar) gösterilir
+  const testGoster = async (bekleyen) => {
+    const t = await dosyaOku("anahtar_testi.json", null);
+    if (!t || !t.sonuclar) { $("#testSonuc").innerHTML = `<p class="ince">Henüz test yapılmadı.</p>`; return t; }
+    $("#testSonuc").innerHTML = `<div class="ince">Son test: <b>${esc(t.zaman)}</b>${bekleyen ? " · ⏳ yeni test sürüyor…" : ""}</div>` +
+      t.sonuclar.map(x => `<div style="margin:4px 0">${x.ok ? "✅" : "❌"} <b>${esc(x.ad)}</b><div class="ince">${esc(x.mesaj)}</div></div>`).join("");
+    return t;
+  };
+  testGoster();
+  $("#aiTest").onclick = async () => {
+    const b = $("#aiTest"); b.disabled = true;
+    try {
+      const once = await dosyaOku("anahtar_testi.json", null);
+      await tetikle("anahtar.json", {}, "yapay zekâ testi");
+      bildir("🧪 Test başladı, 1-2 dakika içinde sonuç burada çıkar.", 5000);
+      for (let i = 0; i < 24; i++) {          // en fazla ~4 dk bekle
+        await new Promise(r => setTimeout(r, 10000));
+        if (!document.body.contains(b)) return;  // sayfa değişti
+        const t = await testGoster(true);
+        if (t && (!once || t.zaman !== once.zaman)) { await testGoster(false); bildir("🧪 Test bitti.", 4000); break; }
+      }
+    } catch (e) { bildir("❌ " + e.message, 6000); }
+    b.disabled = false;
+  };
   saglayiciCiz(a.EK_SAGLAYICILAR || []);
   gorevCiz(a.EK_SAGLAYICILAR || []);
   $("#saatEkle").onclick = () => { const l = [...document.querySelectorAll(".saat")].map(x => x.value); if (l.length < 6) { l.push("18:00"); saatCiz(l); } };
@@ -921,7 +964,7 @@ async function ayarlar() {
       KATEGORILER: $("#kategoriler").value.split("\n").map(x => x.trim()).filter(Boolean),
       KONU_NOTU: $("#konuNotu").value.trim(), TALEP_KONTROLU: $("#talep").checked, SENARYO_NOTU: $("#senaryoNotu").value.trim(), GORSEL_NOTU: $("#gorselNotu").value.trim(), CLOUDFLARE_HESAP: $("#cfHesap").value.trim(),
       OZEL_KONULAR: $("#ozelKonular").value.split("\n").map(x => x.trim()).filter(Boolean),
-      MALIYET_PROFILI: $("#profil").value, BILGI_DOGRULAMA: $("#dogrulama").checked, OTOMATIK_ONAY: $("#otoOnay").checked,
+      MALIYET_PROFILI: $("#profil").value, BILGI_DOGRULAMA: ($("[data-gorev='dogrulama']") || {}).value !== "kapali", OTOMATIK_ONAY: $("#otoOnay").checked,
       ONAY_MODU: $("#onayModu").value,
       TTS_SES: $("#ses").value, TTS_HIZ: $("#hiz").value,
       SES_MOTORU: $("#motor").value, ELEVENLABS_SES: $("#elSes").value.trim() || VARSAYILAN_AYARLAR.ELEVENLABS_SES, KARARTMA: +$("#karartma").value / 100,
