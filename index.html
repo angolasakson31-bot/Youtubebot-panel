@@ -777,7 +777,7 @@ async function ayarlar() {
           <option value="yedek">Sadece stok / NASA görüntüsü bulunamazsa (ucuz)</option>
           <option value="hepsi">Her sahnede (video başına ~6 görsel)</option>
         </select></div>
-      <div id="cfAlan" style="display:none;margin-top:8px">
+      <div id="cfAlan" style="margin-top:8px">
         <label>☁️ Cloudflare hesap numarası (Account ID)</label>
         <input id="cfHesap" autocomplete="off" placeholder="32 haneli harf/rakam, ör. 1a2b3c..." value="${esc(a.CLOUDFLARE_HESAP || "")}">
         <p class="ince">Cloudflare → AI → Workers AI → <b>Use REST API</b> sayfasındaki <b>Account ID</b>. Gizli değil, buraya yapıştır.
@@ -874,7 +874,6 @@ async function ayarlar() {
       [...kaynak.options].filter(o => o.value).map(o => `<option value="${esc(o.value)}" ${acik && o.value === kaynak.value ? "selected" : ""}>${esc(o.textContent)}</option>`).join("");
     if (!acik) el.value = "";
     $("#gorevGorselNe").style.display = el.value ? "" : "none";
-    $("#cfAlan").style.display = el.value.startsWith("cloudflare:") ? "" : "none";
     $("#gorevGorselSira").value = kaynakSira[0] === "ai_gorsel" ? "hepsi" : "yedek";
   };
   const gorselGorevUygula = () => {
