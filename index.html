@@ -94,7 +94,7 @@ const VARSAYILAN_AYARLAR = {
   TTS_SES: "tr-TR-AhmetNeural", TTS_HIZ: "+10%", SES_MOTORU: "edge", ELEVENLABS_SES: "75SIZa3vvET95PHhf1yD", KARARTMA: 0.35, VIDEO_KLIP_ONCELIKLI: true,
   ALTYAZI_BOYUT: 96, ALTYAZI_KELIME: 3, HOOK_SURE: 2.8, HOOK_BOYUT: 100,
   GORSEL_CESITLILIK: true, SERI_ETIKETI: true, FON_MUZIGI: true, MUZIK_SESI: 0.16, OTOMATIK_YORUM: true,
-  IZIN_SURESIZ: false, KONU_NOTU: "", SENARYO_NOTU: "", OZEL_KONULAR: [], YUKLEME_ONCEDEN_SAAT: 30, URETIM_RITMI: "gunluk", TALEP_KONTROLU: true, EK_SAGLAYICILAR: [], GOREV_MODELLERI: {},
+  IZIN_SURESIZ: false, KONU_NOTU: "", SENARYO_NOTU: "", GORSEL_NOTU: "", OZEL_KONULAR: [], YUKLEME_ONCEDEN_SAAT: 30, URETIM_RITMI: "gunluk", TALEP_KONTROLU: true, EK_SAGLAYICILAR: [], GOREV_MODELLERI: {},
   SES_EK_MODEL: "", SES_EK_SES: "alloy", SES_EK_FIYAT: 15, ELEVENLABS_MODEL: "eleven_multilingual_v2", ELEVENLABS_BITIS: "",
   GORSEL_KAYNAKLARI: ["pexels_video", "pixabay_video", "pexels_foto", "pixabay_foto"],
   OZEL_KAYNAKLAR: true,
@@ -777,6 +777,10 @@ async function ayarlar() {
           <option value="yedek">Sadece stok / NASA görüntüsü bulunamazsa (ucuz)</option>
           <option value="hepsi">Her sahnede (video başına ~6 görsel)</option>
         </select></div>
+      <label>🎨 Görsel talimatın (isteğe bağlı)</label>
+      <p class="ince">Görseller nasıl olsun? Yapay zekâ görsel üretirken bu tarife uyar. Kapalıyken de boşa gitmez:
+        stok / NASA görüntüsü aranırken arama kelimeleri buna göre seçilir.</p>
+      <textarea id="gorselNotu" placeholder="ör. Gerçekçi belgesel fotoğrafı, koyu ve gizemli, sinematik ışık; insan yüzü gösterme, çizgi film olmasın">${esc(a.GORSEL_NOTU || "")}</textarea>
       <p class="ince">Kapalıyken görüntüler Pexels / NASA / Wikimedia'dan gelir (ücretsiz). Görsel üretebilen bir sağlayıcı eklediğinde
         modelleri burada çıkar. Bu seçim aşağıdaki 🖼️ Görüntü kaynakları kartıyla aynı ayardır.</p>
     </div>
@@ -938,7 +942,7 @@ async function ayarlar() {
       GUNLUK_YUKLEME_LIMITI: Math.min(6, Math.max(1, +$("#limit").value || 6)),
       YUKLEME_ONCEDEN_SAAT: +$("#onceden").value, URETIM_RITMI: $("#ritim").value,
       KATEGORILER: $("#kategoriler").value.split("\n").map(x => x.trim()).filter(Boolean),
-      KONU_NOTU: $("#konuNotu").value.trim(), TALEP_KONTROLU: $("#talep").checked, SENARYO_NOTU: $("#senaryoNotu").value.trim(),
+      KONU_NOTU: $("#konuNotu").value.trim(), TALEP_KONTROLU: $("#talep").checked, SENARYO_NOTU: $("#senaryoNotu").value.trim(), GORSEL_NOTU: $("#gorselNotu").value.trim(),
       OZEL_KONULAR: $("#ozelKonular").value.split("\n").map(x => x.trim()).filter(Boolean),
       MALIYET_PROFILI: $("#profil").value, BILGI_DOGRULAMA: $("#dogrulama").checked, OTOMATIK_ONAY: $("#otoOnay").checked,
       ONAY_MODU: $("#onayModu").value,
