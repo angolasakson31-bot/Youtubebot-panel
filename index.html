@@ -97,6 +97,7 @@ const VARSAYILAN_AYARLAR = {
   IZIN_SURESIZ: false, KONU_NOTU: "", SENARYO_NOTU: "", OZEL_KONULAR: [], YUKLEME_ONCEDEN_SAAT: 30, URETIM_RITMI: "gunluk", TALEP_KONTROLU: true, EK_SAGLAYICILAR: [], GOREV_MODELLERI: {},
   SES_EK_MODEL: "", SES_EK_SES: "alloy", SES_EK_FIYAT: 15, ELEVENLABS_MODEL: "eleven_multilingual_v2", ELEVENLABS_BITIS: "",
   GORSEL_KAYNAKLARI: ["pexels_video", "pixabay_video", "pexels_foto", "pixabay_foto"],
+  OZEL_KAYNAKLAR: true,
   GORSEL_EK_MODEL: "", GORSEL_EK_BOYUT: "1024x1536", GORSEL_EK_FIYAT: 0.04,
 };
 const GORSEL_KAYNAK_ADLARI = {
@@ -735,6 +736,7 @@ async function ayarlar() {
   <div class="kart"><h3>🖼️ Görüntü kaynakları</h3>
     <p class="alt">Her sahne için yukarıdan aşağı denenir; ilk bulunan kullanılır. ▲▼ ile sırala, kutuyla aç/kapa.</p>
     <div id="kaynaklar"></div>
+    <label style="margin-top:10px"><input type="checkbox" id="ozelKaynak" ${a.OZEL_KAYNAKLAR !== false ? "checked" : ""}> 🛰️ Konunun gerçek görüntüsünü kullan (ücretsiz): uzay sahnelerinde NASA arşivi, adı geçen belirli bir canlı / kişi / yer için Wikimedia Commons önce denenir; bulunamazsa yukarıdaki sıraya dönülür</label>
     <div id="gorselEk" style="margin-top:10px">
       <label>Yapay zekâ görsel modeli</label><select id="gorselEkModel"></select>
       <div class="satir"><div><label>Boyut</label><input id="gorselEkBoyut" value="${esc(a.GORSEL_EK_BOYUT)}"></div>
@@ -914,7 +916,7 @@ async function ayarlar() {
       IZIN_SURESIZ: $("#suresiz").checked, ELEVENLABS_BITIS: $("#elBitis").value || "",
       EK_SAGLAYICILAR: saglayicilariOku(),
       SES_EK_MODEL: $("#sesEkModel").value, SES_EK_SES: $("#sesEkSes").value.trim() || "alloy", SES_EK_FIYAT: +$("#sesEkFiyat").value || 0,
-      GORSEL_KAYNAKLARI: kaynakSira, GORSEL_EK_MODEL: $("#gorselEkModel").value,
+      GORSEL_KAYNAKLARI: kaynakSira, OZEL_KAYNAKLAR: $("#ozelKaynak").checked, GORSEL_EK_MODEL: $("#gorselEkModel").value,
       GORSEL_EK_BOYUT: $("#gorselEkBoyut").value.trim() || "1024x1536", GORSEL_EK_FIYAT: +$("#gorselEkFiyat").value || 0,
       GOREV_MODELLERI: Object.fromEntries([...document.querySelectorAll("[data-gorev]")].map(x => [x.dataset.gorev, x.value]).filter(([, v]) => v)),
     };
