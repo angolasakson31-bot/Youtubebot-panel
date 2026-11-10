@@ -733,18 +733,29 @@ async function ayarlar() {
       %0 = hiç karartma yok (canlı, ama altyazı zor okunabilir), %35 = önerilen, %60 = çok koyu.
       "Her videoda farklı stil" açıksa her video bu değerin ±%6 yakınında olur.</p>
   </div>
-  <div class="kart"><h3>🖼️ Görüntü kaynakları</h3>
-    <p class="alt">Her sahne için yukarıdan aşağı denenir; ilk bulunan kullanılır. ▲▼ ile sırala, kutuyla aç/kapa.</p>
-    <div id="kaynaklar"></div>
-    <label style="margin-top:10px"><input type="checkbox" id="ozelKaynak" ${a.OZEL_KAYNAKLAR !== false ? "checked" : ""}> 🛰️ Konunun gerçek görüntüsünü kullan (ücretsiz): uzay sahnelerinde NASA arşivi, adı geçen belirli bir canlı / kişi / yer için Wikimedia Commons önce denenir; bulunamazsa yukarıdaki sıraya dönülür</label>
-    <div id="gorselEk" style="margin-top:10px">
-      <label>Yapay zekâ görsel modeli</label><select id="gorselEkModel"></select>
-      <div class="satir"><div><label>Boyut</label><input id="gorselEkBoyut" value="${esc(a.GORSEL_EK_BOYUT)}"></div>
+  <div class="kart"><h3>🖼️ Görüntüler</h3>
+    <label>Görüntüler nereden gelsin?</label>
+    <select id="gorselMod">
+      <option value="gercek">Önce gerçek görüntü, yapay zekâ yedek (önerilen)</option>
+      <option value="ai">Önce yapay zekâ, gerçek görüntü yedek</option>
+      <option value="kapali">Sadece gerçek görüntü (yapay zekâ kapalı)</option>
+    </select>
+    <div id="gorselModelAlan">
+      <label>Hangi yapay zekâ görsel üretsin?</label><select id="gorselEkModel"></select>
+      <div id="cfAlan">
+        <label>☁️ Cloudflare hesap numarası (Account ID)</label>
+        <input id="cfHesap" autocomplete="off" placeholder="32 haneli harf/rakam" value="${esc(a.CLOUDFLARE_HESAP || "")}">
+        <p class="ince">Cloudflare → Workers AI → <b>Use REST API</b> sayfasındaki <b>Account ID</b> (ya da tarayıcı adresinde dash.cloudflare.com/ sonrasındaki 32 karakter).
+          Anahtarı (token) aşağıdaki <b>🔑 API anahtarları</b> kartında <b>Cloudflare</b> satırına gir.</p>
+      </div>
+      <div id="gorselEkAyar" class="satir"><div><label>Boyut</label><input id="gorselEkBoyut" value="${esc(a.GORSEL_EK_BOYUT)}"></div>
         <div><label>Görsel başına $</label><input type="number" step="0.01" id="gorselEkFiyat" value="${esc(a.GORSEL_EK_FIYAT)}"></div></div>
-      <p class="ince">Liste boşsa: önce 🤖 Yapay zekâ kartında görsel üretebilen bir sağlayıcı ekle (ör. OpenAI), anahtarını 🔑 kartına gir,
-        İşler → 🔑 Anahtar testi yap → sayfayı yenile. O sağlayıcının görsel modelleri burada kendiliğinden çıkar.</p>
-      <p class="ince">Yapay zekâ görselini sona koyarsan sadece stok bulunamayınca üretilir (ucuz); başa koyarsan her sahne üretilir (video başına ~6 görsel).</p>
     </div>
+    <div class="uyari" style="margin-top:10px"><b>Her sahne için sıra:</b><ol id="gorselSira" style="margin:6px 0 4px 18px;padding:0"></ol>
+      <span class="ince">Biri bulamaz ya da hata verirse (kota bitti, bozuk görsel…) otomatik sıradakine geçer. Hiçbiri bulamazsa sahne koyu kalır.</span></div>
+    <label>🎨 Görsel talimatın (isteğe bağlı)</label>
+    <p class="ince">Görseller nasıl olsun? Yapay zekâ bu tarife uyar; gerçek görüntü aranırken de arama kelimeleri buna göre seçilir.</p>
+    <textarea id="gorselNotu" placeholder="ör. Gerçekçi belgesel fotoğrafı, koyu ve gizemli, sinematik ışık; insan yüzü gösterme, çizgi film olmasın">${esc(a.GORSEL_NOTU || "")}</textarea>
   </div>
   <div class="kart"><h3>💬 Altyazı ve ekran yazısı</h3>
     <div class="satir"><div><label>Altyazı boyutu</label><input type="number" id="aBoyut" min="60" max="140" value="${esc(a.ALTYAZI_BOYUT)}"></div>
@@ -769,27 +780,7 @@ async function ayarlar() {
     <p class="alt">Her işi hangi yapay zekânın yapacağını seç. "Varsayılan" = yukarıdaki maliyet profili (Claude).
       Ek sağlayıcı hata verirse o iş otomatik Claude ile yapılır, video üretimi durmaz.</p>
     <div id="gorevler"></div>
-    <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--cizgi, #333)">
-      <label>🖼️ Sahne görselleri (yapay zekâ ile üretim)</label>
-      <select id="gorevGorsel"></select>
-      <div id="gorevGorselNe" style="display:none"><label>Ne zaman üretilsin?</label>
-        <select id="gorevGorselSira">
-          <option value="yedek">Sadece stok / NASA görüntüsü bulunamazsa (ucuz)</option>
-          <option value="hepsi">Her sahnede (video başına ~6 görsel)</option>
-        </select></div>
-      <div id="cfAlan" style="margin-top:8px">
-        <label>☁️ Cloudflare hesap numarası (Account ID)</label>
-        <input id="cfHesap" autocomplete="off" placeholder="32 haneli harf/rakam, ör. 1a2b3c..." value="${esc(a.CLOUDFLARE_HESAP || "")}">
-        <p class="ince">Cloudflare → AI → Workers AI → <b>Use REST API</b> sayfasındaki <b>Account ID</b>. Gizli değil, buraya yapıştır.
-          Anahtarı (token) ise aşağıdaki <b>🔑 API anahtarları</b> kartında <b>Cloudflare</b> satırına gir. Sonra İşler → 🔑 Anahtar testi.</p>
-      </div>
-      <label>🎨 Görsel talimatın (isteğe bağlı)</label>
-      <p class="ince">Görseller nasıl olsun? Yapay zekâ görsel üretirken bu tarife uyar. Kapalıyken de boşa gitmez:
-        stok / NASA görüntüsü aranırken arama kelimeleri buna göre seçilir.</p>
-      <textarea id="gorselNotu" placeholder="ör. Gerçekçi belgesel fotoğrafı, koyu ve gizemli, sinematik ışık; insan yüzü gösterme, çizgi film olmasın">${esc(a.GORSEL_NOTU || "")}</textarea>
-      <p class="ince">Kapalıyken görüntüler Pexels / NASA / Wikimedia'dan gelir (ücretsiz). Görsel üretebilen bir sağlayıcı eklediğinde
-        modelleri burada çıkar. ☁️ Cloudflare ücretsizdir (hesap numarası + anahtar ister). Bu seçim aşağıdaki 🖼️ Görüntü kaynakları kartıyla aynı ayardır.</p>
-    </div>
+    <p class="ince">🖼️ Sahne görsellerini hangi yapay zekânın yapacağı aşağıdaki <b>🖼️ Görüntüler</b> kartında seçilir.</p>
     <details style="margin-top:12px"><summary><b>➕ Ek yapay zekâ sağlayıcıları</b> <span class="alt">(DeepSeek, Gemini, OpenRouter, Groq…)</span></summary>
       <ol class="alt">
         <li>Sağlayıcının sitesinden API anahtarı al.</li>
@@ -862,50 +853,30 @@ async function ayarlar() {
     ekSec("#sesEkModel", a.SES_EK_MODEL, /tts|speech|audio|voice|sonic/i);
     ekSec("#gorselEkModel", a.GORSEL_EK_MODEL, /image|dall|imagen|flux|diffusion|sdxl|recraft|ideogram/i,
           [["cloudflare:@cf/black-forest-labs/flux-1-schnell", "☁️ Cloudflare · FLUX schnell (ücretsiz günlük kota)"]]);
-    gorselGorevCiz();
+    gorselCiz();
     $("#gorevler").innerHTML = Object.entries(GOREVLER).map(([k, ad]) => `<label>${esc(ad)}</label>
       <select data-gorev="${k}">${[...secenekler, ...(gorevSecim[k] && !secenekler.some(([v]) => v === gorevSecim[k]) ? [[gorevSecim[k], gorevSecim[k] + " (listede yok)"]] : [])].map(([v, t]) => `<option value="${esc(v)}" ${(gorevSecim[k] || "") === v ? "selected" : ""}>${esc(t)}</option>`).join("")}</select>`).join("");
   };
-  // "Yapay zekâ modelleri" kartındaki görsel satırı = görüntü kaynakları kartındaki model + ai_gorsel sırası
-  const gorselGorevCiz = () => {
-    const kaynak = $("#gorselEkModel"), el = $("#gorevGorsel");
-    const acik = kaynakSira.includes("ai_gorsel");
-    el.innerHTML = `<option value="">Kapalı — stok / NASA / Wikimedia görüntüsü (ücretsiz)</option>` +
-      [...kaynak.options].filter(o => o.value).map(o => `<option value="${esc(o.value)}" ${acik && o.value === kaynak.value ? "selected" : ""}>${esc(o.textContent)}</option>`).join("");
-    if (!acik) el.value = "";
-    $("#gorevGorselNe").style.display = el.value ? "" : "none";
-    $("#gorevGorselSira").value = kaynakSira[0] === "ai_gorsel" ? "hepsi" : "yedek";
+  // Görüntüler: tek seçim → kaynak sırası (Pixabay anahtarı yoksa sistem onu kendisi atlar)
+  const STOK = ["pexels_video", "pixabay_video", "pexels_foto", "pixabay_foto"];
+  const GORSEL_MODLARI = {gercek: [...STOK, "ai_gorsel"], ai: ["ai_gorsel", ...STOK], kapali: STOK};
+  const ilkSira = a.GORSEL_KAYNAKLARI || [];
+  $("#gorselMod").value = !ilkSira.includes("ai_gorsel") ? "kapali" : ilkSira[0] === "ai_gorsel" ? "ai" : "gercek";
+  const gorselCiz = () => {
+    const mod = $("#gorselMod").value, model = $("#gorselEkModel").value, cf = model.startsWith("cloudflare:");
+    $("#gorselModelAlan").style.display = mod === "kapali" ? "none" : "";
+    $("#cfAlan").style.display = cf ? "" : "none";
+    $("#gorselEkAyar").style.display = model && !cf ? "" : "none";
+    const ai = `🤖 Yapay zekâ${model ? " (" + esc(($("#gorselEkModel").selectedOptions[0] || {}).textContent || model) + ")" : " — yukarıdan seç"}`;
+    const adimlar = ["🛰️ NASA / Wikimedia — sadece uzay ve adı geçen belirli şeyler (gezegen, tardigrad, Tesla…)"];
+    if (mod === "ai") adimlar.push(ai);
+    adimlar.push("🎬 Pexels video", "🖼️ Pexels fotoğraf");
+    if (mod === "gercek") adimlar.push(ai);
+    $("#gorselSira").innerHTML = adimlar.map(x => `<li>${x}</li>`).join("");
   };
-  const gorselGorevUygula = () => {
-    const model = $("#gorevGorsel").value;
-    kaynakSira = kaynakSira.filter(k => k !== "ai_gorsel");
-    if (model) {
-      $("#gorselEkModel").value = model;
-      if ($("#gorevGorselSira").value === "hepsi") kaynakSira.unshift("ai_gorsel"); else kaynakSira.push("ai_gorsel");
-    }
-    kaynakCiz();
-  };
-  let kaynakSira = [...(a.GORSEL_KAYNAKLARI || [])].filter(k => k in GORSEL_KAYNAK_ADLARI);
-  const kaynakCiz = () => {
-    const hepsi = [...kaynakSira, ...Object.keys(GORSEL_KAYNAK_ADLARI).filter(k => !kaynakSira.includes(k))];
-    $("#kaynaklar").innerHTML = hepsi.map((k, i) => `<div class="satir" style="align-items:center;margin:4px 0">
-      <label style="flex:4;margin:0"><input type="checkbox" class="kAcik" data-k="${k}" ${kaynakSira.includes(k) ? "checked" : ""}> ${esc(GORSEL_KAYNAK_ADLARI[k])}</label>
-      <button type="button" data-yukari="${k}" style="flex:0" ${i === 0 ? "disabled" : ""}>▲</button>
-      <button type="button" data-asagi="${k}" style="flex:0">▼</button></div>`).join("");
-    const oku = () => { kaynakSira = [...document.querySelectorAll(".kAcik")].filter(x => x.checked).map(x => x.dataset.k); };
-    document.querySelectorAll(".kAcik").forEach(x => x.onchange = () => { oku(); kaynakCiz(); });
-    const tasi = (k, yon) => { const l = [...document.querySelectorAll(".kAcik")].map(x => x.dataset.k), i = l.indexOf(k), j = i + yon;
-      if (j < 0 || j >= l.length) return; [l[i], l[j]] = [l[j], l[i]];
-      const acik = new Set(kaynakSira); kaynakSira = l.filter(x => acik.has(x)); kaynakCiz(); };
-    document.querySelectorAll("[data-yukari]").forEach(b => b.onclick = () => tasi(b.dataset.yukari, -1));
-    document.querySelectorAll("[data-asagi]").forEach(b => b.onclick = () => tasi(b.dataset.asagi, 1));
-    $("#gorselEk").style.display = kaynakSira.includes("ai_gorsel") ? "" : "none";
-    if ($("#gorevGorsel")) gorselGorevCiz();
-  };
-  kaynakCiz();
-  $("#gorevGorsel").onchange = gorselGorevUygula;
-  $("#gorevGorselSira").onchange = gorselGorevUygula;
-  $("#gorselEkModel").addEventListener("change", gorselGorevCiz);
+  $("#gorselMod").onchange = gorselCiz;
+  $("#gorselEkModel").addEventListener("change", gorselCiz);
+  gorselCiz();
   $("#motor").onchange = e => $("#sesEk").style.display = e.target.value === "ek" ? "" : "none";
   const anahtarCiz = async () => {
     let d;
@@ -962,7 +933,7 @@ async function ayarlar() {
       IZIN_SURESIZ: $("#suresiz").checked, ELEVENLABS_BITIS: $("#elBitis").value || "",
       EK_SAGLAYICILAR: saglayicilariOku(),
       SES_EK_MODEL: $("#sesEkModel").value, SES_EK_SES: $("#sesEkSes").value.trim() || "alloy", SES_EK_FIYAT: +$("#sesEkFiyat").value || 0,
-      GORSEL_KAYNAKLARI: kaynakSira, OZEL_KAYNAKLAR: $("#ozelKaynak").checked, GORSEL_EK_MODEL: $("#gorselEkModel").value,
+      GORSEL_KAYNAKLARI: GORSEL_MODLARI[$("#gorselMod").value], OZEL_KAYNAKLAR: true, GORSEL_EK_MODEL: $("#gorselEkModel").value,
       GORSEL_EK_BOYUT: $("#gorselEkBoyut").value.trim() || "1024x1536", GORSEL_EK_FIYAT: +$("#gorselEkFiyat").value || 0,
       GOREV_MODELLERI: Object.fromEntries([...document.querySelectorAll("[data-gorev]")].map(x => [x.dataset.gorev, x.value]).filter(([, v]) => v)),
     };
@@ -973,7 +944,7 @@ async function ayarlar() {
     yeni.HOOK_SURE = sinirla(yeni.HOOK_SURE, 1, 6, VARSAYILAN_AYARLAR.HOOK_SURE);
     if (!yeni.KATEGORILER.length) return bildir("En az bir kategori olmalı.");
     if (!yeni.GORSEL_KAYNAKLARI.length) return bildir("En az bir görüntü kaynağı açık olmalı.");
-    if (yeni.GORSEL_KAYNAKLARI.includes("ai_gorsel") && !yeni.GORSEL_EK_MODEL) return bildir("Yapay zekâ görseli için model seç (önce sağlayıcı ekle).", 5000);
+    if (yeni.GORSEL_KAYNAKLARI.includes("ai_gorsel") && !yeni.GORSEL_EK_MODEL) return bildir("🖼️ Görüntüler kartında yapay zekâ modelini seç (ya da 'Sadece gerçek görüntü'yü seç).", 5000);
     if (yeni.CLOUDFLARE_HESAP && !/^[0-9a-zA-Z]{16,64}$/.test(yeni.CLOUDFLARE_HESAP)) return bildir("Cloudflare hesap numarası sadece harf ve rakamdan oluşmalı (32 hane).", 5000);
     if (yeni.GORSEL_KAYNAKLARI.includes("ai_gorsel") && yeni.GORSEL_EK_MODEL.startsWith("cloudflare:") && !yeni.CLOUDFLARE_HESAP)
       return bildir("Cloudflare için hesap numarasını (Account ID) gir.", 5000);
