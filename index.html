@@ -94,7 +94,7 @@ const VARSAYILAN_AYARLAR = {
   TTS_SES: "tr-TR-AhmetNeural", TTS_HIZ: "+10%", SES_MOTORU: "edge", ELEVENLABS_SES: "75SIZa3vvET95PHhf1yD", KARARTMA: 0.35, VIDEO_KLIP_ONCELIKLI: true,
   ALTYAZI_BOYUT: 96, ALTYAZI_KELIME: 3, HOOK_SURE: 2.8, HOOK_BOYUT: 100,
   GORSEL_CESITLILIK: true, SERI_ETIKETI: true, FON_MUZIGI: true, MUZIK_SESI: 0.16, OTOMATIK_YORUM: true,
-  IZIN_SURESIZ: false, KONU_NOTU: "", SENARYO_NOTU: "", GORSEL_NOTU: "", CLOUDFLARE_HESAP: "", OZEL_KONULAR: [], YUKLEME_ONCEDEN_SAAT: 30, URETIM_RITMI: "gunluk", TALEP_KONTROLU: true, EK_SAGLAYICILAR: [], GOREV_MODELLERI: {},
+  IZIN_SURESIZ: false, KONU_NOTU: "", SENARYO_NOTU: "", GORSEL_NOTU: "", CLOUDFLARE_HESAP: "", UYGUNLUK_KONTROLU: "kapali", OZEL_KONULAR: [], YUKLEME_ONCEDEN_SAAT: 30, URETIM_RITMI: "gunluk", TALEP_KONTROLU: true, EK_SAGLAYICILAR: [], GOREV_MODELLERI: {},
   SES_EK_MODEL: "", SES_EK_SES: "alloy", SES_EK_FIYAT: 15, ELEVENLABS_MODEL: "eleven_multilingual_v2", ELEVENLABS_BITIS: "",
   GORSEL_KAYNAKLARI: ["nasa_wiki", "pexels_video", "pixabay_video", "pexels_foto", "pixabay_foto"],
   OZEL_KAYNAKLAR: true,
@@ -307,7 +307,7 @@ const GRUP = {
 };
 let BEKLEYEN = [], YORUMLAR = {}, VIDEO_MALIYET = {};
 const IS_ADLARI = {senaryo: "senaryo", hook_secimi: "açılış seçimi", dogrulama: "bilgi doğrulama", detaylar: "başlık/görsel",
-  seri_yorum: "seri+yorum", ai_gorsel: "yapay zekâ görseli", seslendirme: "ek ses"};
+  seri_yorum: "seri+yorum", ai_gorsel: "yapay zekâ görseli", gorsel_kontrol: "görüntü kontrolü", seslendirme: "ek ses"};
 function maliyetSatiri(id) {
   const m = VIDEO_MALIYET[id];
   if (!m) return "";
@@ -746,6 +746,14 @@ async function ayarlar() {
       işaretlilerden en üstteki denenir; bulamaz ya da hata verirse (kota bitti, bozuk görsel…) bir alttakine geçilir.</p>
     <div id="kaynakListe"></div>
     <p class="ince">Yeni bir yapay zekâ sağlayıcısı eklediğinde görsel modelleri bu listeye kendiliğinden gelir (işaretsiz olarak, en alta).</p>
+    <label>🔍 Görüntü uygun mu, kontrol edilsin mi?</label>
+    <select id="uygunluk">${secenek(a.UYGUNLUK_KONTROLU || "kapali", [
+      ["kapali", "Kapalı — ilk bulunan görüntü kullanılır"],
+      ["kelime", "Bedava kelime kontrolü (kaba: görüntünün açıklaması aranan kelimeyle uyuşmalı)"],
+      ["yapay_zeka", "Yapay zekâ baksın (ucuz model her adaya bakar, ~1 $/ay altı)"],
+      ["ikisi", "İkisi birden (önce kelime, sonra yapay zekâ — ucuz ve güvenilir)"]])}</select>
+    <p class="ince">Açıkken uygun bulunmayan görüntü atlanır; sıradaki aday, o da olmazsa listede bir alttaki kaynak denenir
+      (ör. Pexels'te uygun klip yoksa yapay zekâ görseline geçilir). Yapay zekâ görselleri zaten sahneye özel üretildiği için kontrol edilmez.</p>
     <div id="cfAlan" style="display:none">
       <label>☁️ Cloudflare hesap numarası (Account ID)</label>
       <input id="cfHesap" autocomplete="off" placeholder="32 haneli harf/rakam" value="${esc(a.CLOUDFLARE_HESAP || "")}">
@@ -981,7 +989,7 @@ async function ayarlar() {
       GUNLUK_YUKLEME_LIMITI: Math.min(6, Math.max(1, +$("#limit").value || 6)),
       YUKLEME_ONCEDEN_SAAT: +$("#onceden").value, URETIM_RITMI: $("#ritim").value,
       KATEGORILER: $("#kategoriler").value.split("\n").map(x => x.trim()).filter(Boolean),
-      KONU_NOTU: $("#konuNotu").value.trim(), TALEP_KONTROLU: $("#talep").checked, SENARYO_NOTU: $("#senaryoNotu").value.trim(), GORSEL_NOTU: $("#gorselNotu").value.trim(), CLOUDFLARE_HESAP: $("#cfHesap").value.trim(),
+      KONU_NOTU: $("#konuNotu").value.trim(), TALEP_KONTROLU: $("#talep").checked, SENARYO_NOTU: $("#senaryoNotu").value.trim(), GORSEL_NOTU: $("#gorselNotu").value.trim(), CLOUDFLARE_HESAP: $("#cfHesap").value.trim(), UYGUNLUK_KONTROLU: $("#uygunluk").value,
       OZEL_KONULAR: $("#ozelKonular").value.split("\n").map(x => x.trim()).filter(Boolean),
       MALIYET_PROFILI: $("#profil").value, BILGI_DOGRULAMA: ($("[data-gorev='dogrulama']") || {}).value !== "kapali", OTOMATIK_ONAY: $("#otoOnay").checked,
       ONAY_MODU: $("#onayModu").value,
