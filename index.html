@@ -146,8 +146,9 @@ function modelFiyati(model, saglayicilar) {
 }
 function aylikCagri(is, ayar) {
   const video = (ayar.saatSayisi || 2) * 30, gunluk = ayar.ritim !== "haftalik";
+  const trendGun = Math.round((ayar.trendGunSayisi ?? 4) * 4.3);   // güncel konu sadece trend günlerinde aranır
   return {senaryo: video, hook_secimi: video, dogrulama: video, detaylar: video,
-          guncel_konular: gunluk ? 30 : 8, evergreen_konular: gunluk ? 30 : 8, strateji: 4, seri_yorum: 0}[is] ?? 0;
+          guncel_konular: gunluk ? trendGun : 8, evergreen_konular: gunluk ? 30 : 8, strateji: 4, seri_yorum: 0}[is] ?? 0;
 }
 function cagriBuyuklugu(is, kayitlar) {
   const l = (kayitlar || []).filter(k => k.is === is && (k.giris || k.cikis));
@@ -846,6 +847,7 @@ async function ayarlar() {
   <div class="kart"><h3>🤖 Yapay zekâ modelleri</h3>
     <p class="alt">Her işi hangi yapay zekânın yapacağını seç. "Varsayılan" = yukarıdaki maliyet profili (Claude).
       Ek sağlayıcı hata verirse o iş otomatik Claude ile yapılır, video üretimi durmaz.</p>
+    <div id="aiHarcama" class="kart" style="margin:8px 0;padding:10px"></div>
     <div id="aiToplam" class="uyari" style="margin:8px 0"></div>
     <div id="gorevler"></div>
     <div class="uyari" style="margin-top:12px"><b>🧪 Test et</b>
@@ -930,7 +932,9 @@ async function ayarlar() {
     kaynakCiz([...uygunlar(gorselDesen), ...ekler.filter(([k]) => gorselDesen.test(k))]);
     const tahminAyar = () => ({profil: $("#profil") ? $("#profil").value : a.MALIYET_PROFILI, saglayicilar: liste,
       kayitlar: maliyetKayit, ritim: $("#ritim") ? $("#ritim").value : a.URETIM_RITMI,
-      saatSayisi: document.querySelectorAll(".saat").length || (a.YAYINLANMA_SAATLERI || []).length || 2});
+      saatSayisi: document.querySelectorAll(".saat").length || (a.YAYINLANMA_SAATLERI || []).length || 2,
+      trendGunSayisi: document.querySelectorAll("[data-gun]").length
+        ? document.querySelectorAll("[data-gun]:checked").length : (a.TREND_GUNLERI || []).length});
     const ta = tahminAyar();
     $("#gorevler").innerHTML = Object.entries(GOREVLER).map(([k, ad]) => {
       const l = [...secenekler, ...(KAPATILABILIR.has(k) ? [["kapali", "⛔ Yapma (bu iş kapalı)"]] : [])];
@@ -942,13 +946,38 @@ async function ayarlar() {
     }).join("");
     tahminYaz = () => {
       const t = tahminAyar();
+      const sifir = a.MALIYET_SIFIR ? new Date(a.MALIYET_SIFIR) : null;
+      const gercek = (maliyetKayit || []).filter(k => !sifir || new Date(k.zaman) >= sifir);
+      const gercekIs = is => { const l = gercek.filter(k => k.is === is); return [l.reduce((x, k) => x + (k.usd || 0), 0), l.length]; };
       let toplam = 0, eksik = false;
       document.querySelectorAll("[data-gorev]").forEach(sel => {
         const k = sel.dataset.gorev, m = aylikMaliyet(k, sel.value, t), n = aylikCagri(k, t);
         if (m == null) eksik = true; else toplam += m;
-        document.querySelector(`[data-tahmin="${k}"]`).textContent = sel.value === "kapali" ? "💰 0 $ (kapalı)"
-          : `💰 ${dolar(m)}/ay${m != null ? ` (~${Math.round(m * TL_KURU)} ₺)` : ""} · ayda ~${n} kez`;
+        const [gu, gs] = gercekIs(k);
+        document.querySelector(`[data-tahmin="${k}"]`).textContent = (sel.value === "kapali" ? "💰 tahmin: 0 $ (kapalı)"
+          : `💰 tahmin: ${dolar(m)}/ay${m != null ? ` (~${Math.round(m * TL_KURU)} ₺)` : ""} · ayda ~${n} kez`)
+          + ` · 🧾 harcanan: ${gu.toFixed(3).replace(".", ",")} $ (${gs} kez)`;
       });
+      const gToplam = gercek.reduce((x, k) => x + (k.usd || 0), 0);
+      const kredi = gercek.filter(k => k.is === "seslendirme_kredi").reduce((x, k) => x + (k.kredi || 0), 0);
+      const gorsel = gercek.filter(k => k.is === "ai_gorsel");
+      const kontrol = gercekIs("gorsel_kontrol");
+      const videolar = new Set(gercek.filter(k => k.video).map(k => k.video)).size;
+      $("#aiHarcama").innerHTML = `<b>🧾 Gerçekte harcanan: ${gToplam.toFixed(2).replace(".", ",")} $ (~${Math.round(gToplam * TL_KURU)} ₺)</b>
+        <span class="ince">· ${sifir ? sifir.toLocaleString("tr-TR", {day: "numeric", month: "long", hour: "2-digit", minute: "2-digit"}) + "'dan beri" : "kayıtların başından beri"}
+        · ${videolar} video${videolar ? ` · video başına ~${(gercek.filter(k => k.video).reduce((x, k) => x + (k.usd || 0), 0) / videolar).toFixed(3).replace(".", ",")} $` : ""}</span>
+        <div class="ince">🎙️ ElevenLabs: ${kredi} kredi · 🖼️ yapay zekâ görseli: ${gorsel.length} adet (${gorsel.reduce((x, k) => x + (k.usd || 0), 0).toFixed(2).replace(".", ",")} $)
+          ${kontrol[1] ? ` · 🔍 görüntü kontrolü: ${kontrol[0].toFixed(3).replace(".", ",")} $ (${kontrol[1]} kez)` : ""}</div>
+        <button type="button" id="maliyetSifirla" style="margin-top:6px">🔄 Harcama sayacını sıfırla</button>`;
+      $("#maliyetSifirla").onclick = async () => {
+        if (!confirm("Harcama sayacı şu andan itibaren sıfırdan başlasın mı? (Eski kayıtlar silinmez, İstatistik sekmesinde durur.)")) return;
+        try {
+          const taze = await dosyaOku("ayarlar.json", {});
+          taze.MALIYET_SIFIR = new Date().toISOString();
+          await dosyaYaz("ayarlar.json", taze, "Panel: harcama sayacı sıfırlandı");
+          a.MALIYET_SIFIR = taze.MALIYET_SIFIR; tahminYaz(); bildir("🔄 Sayaç sıfırlandı.", 3000);
+        } catch (e) { bildir("❌ " + e.message, 6000); }
+      };
       $("#aiToplam").innerHTML = `<b>💰 Tahmini toplam: ${dolar(toplam)}/ay (~${Math.round(toplam * TL_KURU)} ₺)</b>${eksik ? " + fiyatı girilmemiş sağlayıcılar" : ""}
         <div class="ince">Son çağrıların gerçek ölçümüne ve seçtiğin modellerin fiyatına göre; ${t.saatSayisi * 30} video/ay varsayımıyla.
         Ses (Edge / ElevenLabs aboneliği) ve görseller (Pexels, NASA, Cloudflare) bu hesaba girmez; ⚡ ile istediğin uzun videolar daha pahalıdır.</div>`;
@@ -1058,6 +1087,7 @@ async function ayarlar() {
   saglayiciCiz(a.EK_SAGLAYICILAR || []);
   gorevCiz(a.EK_SAGLAYICILAR || []);
   ["#profil", "#ritim"].forEach(id => $(id) && $(id).addEventListener("change", () => gorevCiz(saglayicilariOku())));
+  document.querySelectorAll("[data-gun]").forEach(c => c.addEventListener("change", () => gorevCiz(saglayicilariOku())));
   $("#saatEkle").onclick = () => { const l = [...document.querySelectorAll(".saat")].map(x => x.value); if (l.length < 6) { l.push("18:00"); saatCiz(l); } };
   $("#karartma").oninput = e => $("#kVal").textContent = e.target.value + "%";
   $("#muzikSes").oninput = e => $("#mVal").textContent = e.target.value + "%";
