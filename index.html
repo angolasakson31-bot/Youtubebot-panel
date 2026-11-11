@@ -120,6 +120,52 @@ const GOREV_KAPALI_NOTU = {
   seri_yorum: "eski videolara seri ve yorum eklenmez",
   strateji: "haftalık öğrenme yapılmaz, sistem performanstan ders çıkarmaz",
 };
+// ── Aylık maliyet tahmini (ayarlar.py FIYATLAR / MALIYET_PROFILLERI / WEB_ARAMA_FIYATI ile aynı) ──
+const FIYATLAR = {"claude-opus-5-5": [4.00, 20.00], "claude-sonnet-5-5": [2.00, 10.00], "claude-haiku-5-5": [0.10, 0.50]};
+const WEB_ARAMA_FIYATI = 0.01, TL_KURU = 34;
+const PROFIL_MODELLERI = {   // "Varsayılan" seçilince hangi model çalışır
+  ekonomik: {senaryo: "claude-sonnet-5-5", dogrulama: "claude-haiku-5-5"},
+  dengeli: {senaryo: "claude-opus-5-5", dogrulama: "claude-sonnet-5-5"},
+  kalite: {senaryo: "claude-opus-5-5", dogrulama: "claude-sonnet-5-5"},
+};
+const VARSAYILAN_GOREV_MODELI = {guncel_konular: "claude-sonnet-5-5", evergreen_konular: "claude-sonnet-5-5",
+  hook_secimi: "claude-haiku-5-5", detaylar: "claude-haiku-5-5", seri_yorum: "claude-haiku-5-5", strateji: "claude-sonnet-5-5"};
+// Ölçüm yoksa kullanılan tipik çağrı büyüklükleri (11 Kasım 2026 ölçümü): [giriş token, çıkış token, web araması]
+const TIPIK_CAGRI = {guncel_konular: [24650, 490, 3], evergreen_konular: [2640, 460, 0], senaryo: [1850, 2570, 0],
+  hook_secimi: [1620, 920, 0], dogrulama: [13730, 1830, 2], detaylar: [1150, 1510, 0], seri_yorum: [810, 510, 0], strateji: [6000, 1500, 0]};
+function modelFiyati(model, saglayicilar) {
+  if (!model) return null;
+  if (model.startsWith("ek")) {
+    const [yuva, ...ad] = model.slice(2).split(":");
+    const sg = (saglayicilar || []).find(x => +x.yuva === +yuva);
+    return sg ? (sg.fiyat || [0, 0]).map(Number) : null;
+  }
+  if (FIYATLAR[model]) return FIYATLAR[model];
+  const aile = Object.keys(FIYATLAR).find(k => model.includes(k.split("-")[1]));
+  return aile ? FIYATLAR[aile] : [4.00, 20.00];   // yeni / bilinmeyen Claude modeli: en pahalı fiyatla tahmin
+}
+function aylikCagri(is, ayar) {
+  const video = (ayar.saatSayisi || 2) * 30, gunluk = ayar.ritim !== "haftalik";
+  return {senaryo: video, hook_secimi: video, dogrulama: video, detaylar: video,
+          guncel_konular: gunluk ? 30 : 8, evergreen_konular: gunluk ? 30 : 8, strateji: 4, seri_yorum: 0}[is] ?? 0;
+}
+function cagriBuyuklugu(is, kayitlar) {
+  const l = (kayitlar || []).filter(k => k.is === is && (k.giris || k.cikis));
+  if (!l.length) return TIPIK_CAGRI[is] || [2000, 1000, 0];
+  const ort = f => l.reduce((t, k) => t + (k[f] || 0), 0) / l.length;
+  return [ort("giris"), ort("cikis"), ort("arama")];
+}
+// Bir iş için seçilen modelle aylık tahmini $ (null = hesaplanamadı)
+function aylikMaliyet(is, secim, ayar) {
+  if (secim === "kapali") return 0;
+  const model = secim || (PROFIL_MODELLERI[ayar.profil] || PROFIL_MODELLERI.dengeli)[is] || VARSAYILAN_GOREV_MODELI[is];
+  const f = modelFiyati(model, ayar.saglayicilar);
+  if (!f) return null;
+  const [g, c, ara] = cagriBuyuklugu(is, ayar.kayitlar);
+  const tek = g / 1e6 * f[0] + c / 1e6 * f[1] + (model.startsWith("claude") ? ara * WEB_ARAMA_FIYATI : 0);
+  return tek * aylikCagri(is, ayar);
+}
+const dolar = x => x == null ? "fiyat girilmemiş" : x < 0.005 ? "~0 $" : `~${x.toFixed(2).replace(".", ",")} $`;
 const CLAUDE_MODELLERI = [["claude-opus-5-5", "Claude Opus 5.5 (en iyi, pahalı)"], ["claude-sonnet-5-5", "Claude Sonnet 5.5 (orta)"],
                           ["claude-haiku-5-5", "Claude Haiku 5.5 (en ucuz)"]];
 const HAZIR_SAGLAYICILAR = {
@@ -686,7 +732,8 @@ function kendiVideom(v) {
 // ─────────────────────────────────────────
 async function ayarlar() {
   $("#ana").innerHTML = `<p class="alt">Yükleniyor…</p>`;
-  const [kayitli, bulunan] = await Promise.all([dosyaOku("ayarlar.json", {}), dosyaOku("modeller.json", null)]);
+  const [kayitli, bulunan, maliyetKayit] = await Promise.all([dosyaOku("ayarlar.json", {}), dosyaOku("modeller.json", null),
+                                                            dosyaOku("maliyet.json", [])]);
   const a = {...VARSAYILAN_AYARLAR, ...(typeof kayitli === "object" ? kayitli : {})};
   // Claude modelleri: sağlayıcıdan otomatik bulunan liste (yeni çıkanlar 🆕), yoksa sabit liste
   const yeniSinir = Date.now() - 45 * 864e5;
@@ -799,6 +846,7 @@ async function ayarlar() {
   <div class="kart"><h3>🤖 Yapay zekâ modelleri</h3>
     <p class="alt">Her işi hangi yapay zekânın yapacağını seç. "Varsayılan" = yukarıdaki maliyet profili (Claude).
       Ek sağlayıcı hata verirse o iş otomatik Claude ile yapılır, video üretimi durmaz.</p>
+    <div id="aiToplam" class="uyari" style="margin:8px 0"></div>
     <div id="gorevler"></div>
     <div class="uyari" style="margin-top:12px"><b>🧪 Test et</b>
       <p class="ince">Seçtiğin yapay zekâların ve anahtarların çalışıp çalışmadığını dener (Claude, ek sağlayıcılar, Cloudflare görseli, Pexels, NASA…).
@@ -880,14 +928,35 @@ async function ayarlar() {
     // Görsel modelleri: sağlayıcıda bulunan + elle yazılan, adı görsel modeli olanlar
     const gorselDesen = /image|dall|imagen|flux|diffusion|sdxl|recraft|ideogram/i;
     kaynakCiz([...uygunlar(gorselDesen), ...ekler.filter(([k]) => gorselDesen.test(k))]);
+    const tahminAyar = () => ({profil: $("#profil") ? $("#profil").value : a.MALIYET_PROFILI, saglayicilar: liste,
+      kayitlar: maliyetKayit, ritim: $("#ritim") ? $("#ritim").value : a.URETIM_RITMI,
+      saatSayisi: document.querySelectorAll(".saat").length || (a.YAYINLANMA_SAATLERI || []).length || 2});
+    const ta = tahminAyar();
     $("#gorevler").innerHTML = Object.entries(GOREVLER).map(([k, ad]) => {
       const l = [...secenekler, ...(KAPATILABILIR.has(k) ? [["kapali", "⛔ Yapma (bu iş kapalı)"]] : [])];
       if (gorevSecim[k] && !l.some(([v]) => v === gorevSecim[k])) l.push([gorevSecim[k], gorevSecim[k] + " (listede yok)"]);
       return `<label>${esc(ad)}${KAPATILABILIR.has(k) ? "" : ' <span class="ince">(zorunlu)</span>'}</label>
-      <select data-gorev="${k}">${l.map(([v, t]) => `<option value="${esc(v)}" ${(gorevSecim[k] || "") === v ? "selected" : ""}>${esc(t)}</option>`).join("")}</select>
+      <select data-gorev="${k}">${l.map(([v, t]) => `<option value="${esc(v)}" ${(gorevSecim[k] || "") === v ? "selected" : ""}>${esc(t)} — ${dolar(aylikMaliyet(k, v, ta))}/ay</option>`).join("")}</select>
+      <p class="ince" style="margin-top:2px" data-tahmin="${k}"></p>
       ${GOREV_KAPALI_NOTU[k] ? `<p class="ince" style="margin-top:2px">⛔ seçilirse: ${GOREV_KAPALI_NOTU[k]}</p>` : ""}`;
     }).join("");
+    tahminYaz = () => {
+      const t = tahminAyar();
+      let toplam = 0, eksik = false;
+      document.querySelectorAll("[data-gorev]").forEach(sel => {
+        const k = sel.dataset.gorev, m = aylikMaliyet(k, sel.value, t), n = aylikCagri(k, t);
+        if (m == null) eksik = true; else toplam += m;
+        document.querySelector(`[data-tahmin="${k}"]`).textContent = sel.value === "kapali" ? "💰 0 $ (kapalı)"
+          : `💰 ${dolar(m)}/ay${m != null ? ` (~${Math.round(m * TL_KURU)} ₺)` : ""} · ayda ~${n} kez`;
+      });
+      $("#aiToplam").innerHTML = `<b>💰 Tahmini toplam: ${dolar(toplam)}/ay (~${Math.round(toplam * TL_KURU)} ₺)</b>${eksik ? " + fiyatı girilmemiş sağlayıcılar" : ""}
+        <div class="ince">Son çağrıların gerçek ölçümüne ve seçtiğin modellerin fiyatına göre; ${t.saatSayisi * 30} video/ay varsayımıyla.
+        Ses (Edge / ElevenLabs aboneliği) ve görseller (Pexels, NASA, Cloudflare) bu hesaba girmez; ⚡ ile istediğin uzun videolar daha pahalıdır.</div>`;
+    };
+    document.querySelectorAll("[data-gorev]").forEach(sel => sel.addEventListener("change", tahminYaz));
+    tahminYaz();
   };
+  let tahminYaz = () => {};
   // Görüntüler: işaretli kaynaklar, yukarıdan aşağı sırayla denenir (ayarlar.py GORSEL_KAYNAKLARI)
   const SABIT_KAYNAKLAR = [
     ["nasa_wiki", "🛰️ NASA / Wikimedia — gerçek görüntü (sadece uzay ve adı geçen şeylerde: gezegen, tardigrad, Tesla…)"],
@@ -988,6 +1057,7 @@ async function ayarlar() {
   };
   saglayiciCiz(a.EK_SAGLAYICILAR || []);
   gorevCiz(a.EK_SAGLAYICILAR || []);
+  ["#profil", "#ritim"].forEach(id => $(id) && $(id).addEventListener("change", () => gorevCiz(saglayicilariOku())));
   $("#saatEkle").onclick = () => { const l = [...document.querySelectorAll(".saat")].map(x => x.value); if (l.length < 6) { l.push("18:00"); saatCiz(l); } };
   $("#karartma").oninput = e => $("#kVal").textContent = e.target.value + "%";
   $("#muzikSes").oninput = e => $("#mVal").textContent = e.target.value + "%";
