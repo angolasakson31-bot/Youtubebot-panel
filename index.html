@@ -77,6 +77,7 @@ a{color:var(--mavi)}
 </header>
 <div id="izinSerit" style="display:none;margin:8px 12px 0;padding:10px 12px;border-radius:10px;cursor:pointer;font-size:14px"></div>
 <div id="uyariSerit" style="margin:0 12px"></div>
+<div id="oneriSerit" style="margin:0 12px"></div>
 <main id="ana"></main>
 <div id="kararCubugu"><span id="kararOzet"></span><span><button id="kararIptal">Vazgeç</button> <button class="ana" id="kararGonder">Gönder</button></span></div>
 <div id="bildirim"></div>
@@ -103,7 +104,7 @@ const VARSAYILAN_AYARLAR = {
   TTS_SES: "tr-TR-AhmetNeural", TTS_HIZ: "+10%", SES_MOTORU: "edge", ELEVENLABS_SES: "75SIZa3vvET95PHhf1yD", KARARTMA: 0.35, VIDEO_KLIP_ONCELIKLI: true,
   ALTYAZI_BOYUT: 96, ALTYAZI_KELIME: 3, HOOK_SURE: 2.8, HOOK_BOYUT: 100,
   GORSEL_CESITLILIK: true, SERI_ETIKETI: true, FON_MUZIGI: true, MUZIK_SESI: 0.16, OTOMATIK_YORUM: true,
-  IZIN_SURESIZ: false, URETIM_DURAKLAT: false, GUNLUK_SURE: 30, AYLIK_BUTCE: 0, BUTCE_DAVRANIS: "ucuz", KONU_NOTU: "", SENARYO_NOTU: "", GORSEL_NOTU: "", CLOUDFLARE_HESAP: "", UYGUNLUK_KONTROLU: "kapali", OZEL_KONULAR: [], YUKLEME_ONCEDEN_SAAT: 30, URETIM_RITMI: "gunluk", TALEP_KONTROLU: true, EK_SAGLAYICILAR: [], GOREV_MODELLERI: {},
+  IZIN_SURESIZ: false, ONERI_KARARLARI: {}, URETIM_DURAKLAT: false, GUNLUK_SURE: 30, AYLIK_BUTCE: 0, BUTCE_DAVRANIS: "ucuz", KONU_NOTU: "", SENARYO_NOTU: "", GORSEL_NOTU: "", CLOUDFLARE_HESAP: "", UYGUNLUK_KONTROLU: "kapali", OZEL_KONULAR: [], YUKLEME_ONCEDEN_SAAT: 30, URETIM_RITMI: "gunluk", TALEP_KONTROLU: true, EK_SAGLAYICILAR: [], GOREV_MODELLERI: {},
   SES_EK_MODEL: "", SES_EK_SES: "alloy", SES_EK_FIYAT: 15, ELEVENLABS_MODEL: "eleven_multilingual_v2", ELEVENLABS_BITIS: "",
   GORSEL_KAYNAKLARI: ["nasa_wiki", "pexels_video", "pixabay_video", "pexels_foto", "pixabay_foto"],
   OZEL_KAYNAKLAR: true,
@@ -1368,11 +1369,55 @@ async function uyariSeridi() {
     $("#uyariSerit").innerHTML = satir.map(([tur, h]) => `<div class="${tur === "kirmizi" ? "kirmiziSerit" : "uyari"}" style="margin-top:8px">${h}</div>`).join("");
   } catch (e) {}
 }
+// 💡 Haftalık analizin ayar önerileri (strateji.json → oneriler). Kararlar ayarlar.json ONERI_KARARLARI'nda.
+const ONERI_ADLARI = {KONU_NOTU: "📝 Konu talimatı", SENARYO_NOTU: "✍️ Senaryo talimatı", GORSEL_NOTU: "🎨 Görsel talimatı",
+  KATEGORILER: "📚 Konu alanları", OZEL_KONULAR: "🎯 Belirli konular", TREND_GUNLERI: "📰 Güncel haber günleri",
+  GUNLUK_SURE: "⏱️ Günlük video süresi", YAYINLANMA_SAATLERI: "🕐 Yayın saatleri", UYGUNLUK_KONTROLU: "🔍 Görüntü uygunluk kontrolü"};
+const oneriDeger = (alan, d) => alan === "TREND_GUNLERI" ? (d.length ? d.map(i => GUN_ADLARI[i]).join(", ") : "hiç") :
+  alan === "GUNLUK_SURE" ? (d >= 60 ? (d / 60 + " dk").replace(".", ",") : d + " sn") : Array.isArray(d) ? d.join(", ") : String(d);
+function oneriUygula(ayar, o) {
+  if (o.islem === "ekle") {
+    if (["KATEGORILER", "OZEL_KONULAR"].includes(o.alan)) ayar[o.alan] = [...(ayar[o.alan] || VARSAYILAN_AYARLAR[o.alan] || []), o.deger];
+    else ayar[o.alan] = [String(ayar[o.alan] || "").trim(), o.deger].filter(Boolean).join("\n");
+  } else ayar[o.alan] = o.deger;
+}
+async function oneriSeridi() {
+  try {
+    const [st, ayar] = await Promise.all([dosyaOku("strateji.json", null), dosyaOku("ayarlar.json", {})]);
+    const kararlar = ayar.ONERI_KARARLARI || {};
+    const bekleyen = ((st && st.oneriler) || []).filter(o => !kararlar[o.id]);
+    if (!bekleyen.length) { $("#oneriSerit").innerHTML = ""; return; }
+    $("#oneriSerit").innerHTML = `<div class="kart" style="margin-top:8px;border-color:var(--mavi)">
+      <b>💡 Sistemin önerileri</b> <span class="ince">· ${esc(st.tarih)} haftalık analizinden · onaylamadan hiçbir ayar değişmez</span>
+      ${bekleyen.map(o => {
+        const mevcut = o.islem === "ayarla" ? ` <span class="ince">(şu an: ${esc(oneriDeger(o.alan, ayar[o.alan] ?? VARSAYILAN_AYARLAR[o.alan] ?? ""))})</span>` : "";
+        return `<div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--cizgi)">
+          <div><b>${esc(ONERI_ADLARI[o.alan] || o.alan)}</b>: ${o.islem === "ekle" ? `➕ “${esc(o.deger)}” eklensin` : `→ <b>${esc(oneriDeger(o.alan, o.deger))}</b> olsun${mevcut}`}</div>
+          ${o.neden ? `<div class="ince">Neden: ${esc(o.neden)}</div>` : ""}
+          <div class="satir" style="margin-top:6px"><button class="ana" data-oneri="${esc(o.id)}" data-karar="uygulandi">✅ Uygula</button>
+            <button data-oneri="${esc(o.id)}" data-karar="gecildi">✖ Geç</button></div></div>`;
+      }).join("")}</div>`;
+    document.querySelectorAll("[data-oneri]").forEach(b => b.onclick = async () => {
+      const o = bekleyen.find(x => x.id === b.dataset.oneri);
+      document.querySelectorAll(`[data-oneri="${o.id}"]`).forEach(x => x.disabled = true);
+      try {
+        const taze = await dosyaOku("ayarlar.json", {});
+        if (b.dataset.karar === "uygulandi") oneriUygula(taze, o);
+        taze.ONERI_KARARLARI = {...(taze.ONERI_KARARLARI || {}), [o.id]: b.dataset.karar};
+        await dosyaYaz("ayarlar.json", taze, `Panel: öneri ${b.dataset.karar === "uygulandi" ? "uygulandı" : "geçildi"} (${o.alan})`);
+        bildir(b.dataset.karar === "uygulandi" ? "✅ Uygulandı, bir sonraki üretimde geçerli." : "Geçildi, bir daha önerilmeyecek.", 4000);
+        oneriSeridi();
+        if (SEKME === "ayarlar") sekmeAc("ayarlar");
+      } catch (e) { bildir("❌ " + e.message, 6000); document.querySelectorAll(`[data-oneri="${o.id}"]`).forEach(x => x.disabled = false); }
+    });
+  } catch (e) {}
+}
 async function basla() {
   if (!TOKEN) return kurulumEkrani();
   $("#sekmeler").style.display = "";
   izinSeridi(); setInterval(izinSeridi, 10 * 60 * 1000);
   uyariSeridi(); setInterval(uyariSeridi, 5 * 60 * 1000);
+  oneriSeridi();
   try { const u = await (await gh("/user")).json(); $("#kullanici").textContent = u.login || ""; } catch (e) {}
   sekmeAc("videolar");
 }
