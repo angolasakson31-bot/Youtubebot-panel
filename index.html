@@ -49,6 +49,14 @@ input[type=checkbox]{width:auto}
 video{width:100%;max-height:70vh;border-radius:10px;margin-top:10px;background:#000}
 .modal{position:fixed;inset:0;z-index:30;background:rgba(0,0,0,.6);display:none;align-items:flex-end;justify-content:center}
 .modal .icerik{background:var(--kart);width:100%;max-width:760px;max-height:92vh;overflow:auto;border-radius:18px 18px 0 0;padding:16px 16px calc(20px + env(safe-area-inset-bottom))}
+.ayarMenu{display:flex;gap:6px;overflow-x:auto;margin:0 0 10px;padding-bottom:4px}
+.ayarMenu a{white-space:nowrap;padding:6px 10px;border:1px solid var(--cizgi);border-radius:999px;font-size:13px;color:inherit;text-decoration:none;background:var(--kart)}
+.kart{scroll-margin-top:70px}
+.kart h4{margin:14px 0 4px;font-size:14px}
+.kaydetCubugu{position:sticky;bottom:0;z-index:4;display:flex;gap:10px;align-items:center;padding:10px 0;margin-top:6px;
+  background:linear-gradient(transparent,var(--bg) 30%)}
+.kaydetCubugu .ana{flex:0 0 auto}
+.kirmiziSerit{background:#3a1212;border:1px solid #a33;color:#ffd6d6;padding:10px 12px;border-radius:10px;margin:8px 0;font-size:14px}
 .uyari{background:#2b2410;border:1px solid #665a00;color:#f3e3a0;padding:10px;border-radius:10px;font-size:13px}
 .hata{background:#2b1414;border:1px solid #7a2b2b;color:#ffc9c9;padding:10px;border-radius:10px;font-size:13px}
 .ince{font-size:12px;color:var(--soluk)}
@@ -68,6 +76,7 @@ a{color:var(--mavi)}
   </nav>
 </header>
 <div id="izinSerit" style="display:none;margin:8px 12px 0;padding:10px 12px;border-radius:10px;cursor:pointer;font-size:14px"></div>
+<div id="uyariSerit" style="margin:0 12px"></div>
 <main id="ana"></main>
 <div id="kararCubugu"><span id="kararOzet"></span><span><button id="kararIptal">Vazgeç</button> <button class="ana" id="kararGonder">Gönder</button></span></div>
 <div id="bildirim"></div>
@@ -94,7 +103,7 @@ const VARSAYILAN_AYARLAR = {
   TTS_SES: "tr-TR-AhmetNeural", TTS_HIZ: "+10%", SES_MOTORU: "edge", ELEVENLABS_SES: "75SIZa3vvET95PHhf1yD", KARARTMA: 0.35, VIDEO_KLIP_ONCELIKLI: true,
   ALTYAZI_BOYUT: 96, ALTYAZI_KELIME: 3, HOOK_SURE: 2.8, HOOK_BOYUT: 100,
   GORSEL_CESITLILIK: true, SERI_ETIKETI: true, FON_MUZIGI: true, MUZIK_SESI: 0.16, OTOMATIK_YORUM: true,
-  IZIN_SURESIZ: false, KONU_NOTU: "", SENARYO_NOTU: "", GORSEL_NOTU: "", CLOUDFLARE_HESAP: "", UYGUNLUK_KONTROLU: "kapali", OZEL_KONULAR: [], YUKLEME_ONCEDEN_SAAT: 30, URETIM_RITMI: "gunluk", TALEP_KONTROLU: true, EK_SAGLAYICILAR: [], GOREV_MODELLERI: {},
+  IZIN_SURESIZ: false, URETIM_DURAKLAT: false, GUNLUK_SURE: 30, AYLIK_BUTCE: 0, BUTCE_DAVRANIS: "ucuz", KONU_NOTU: "", SENARYO_NOTU: "", GORSEL_NOTU: "", CLOUDFLARE_HESAP: "", UYGUNLUK_KONTROLU: "kapali", OZEL_KONULAR: [], YUKLEME_ONCEDEN_SAAT: 30, URETIM_RITMI: "gunluk", TALEP_KONTROLU: true, EK_SAGLAYICILAR: [], GOREV_MODELLERI: {},
   SES_EK_MODEL: "", SES_EK_SES: "alloy", SES_EK_FIYAT: 15, ELEVENLABS_MODEL: "eleven_multilingual_v2", ELEVENLABS_BITIS: "",
   GORSEL_KAYNAKLARI: ["nasa_wiki", "pexels_video", "pixabay_video", "pexels_foto", "pixabay_foto"],
   OZEL_KAYNAKLAR: true,
@@ -112,7 +121,7 @@ const GOREVLER = {
   detaylar: "Başlık / açıklama / görsel kelimeler", seri_yorum: "Seri + yorum (eski videolar)", strateji: "Haftalık öğrenme analizi",
 };
 // Panelde "⛔ Yapma" seçilebilen işler (ortak.KAPATILABILIR_GOREVLER ile aynı)
-const KAPATILABILIR = new Set(["guncel_konular", "hook_secimi", "dogrulama", "seri_yorum", "strateji"]);
+const KAPATILABILIR = new Set(["hook_secimi", "dogrulama", "seri_yorum", "strateji"]);   // güncel konu: İçerik → haber günleri
 const GOREV_KAPALI_NOTU = {
   guncel_konular: "internette haber aranmaz, bütün videolar kalıcı (evergreen) konulardan olur",
   hook_secimi: "açılış yarışması yapılmaz, ilk yazılan açılış kullanılır",
@@ -742,112 +751,124 @@ async function ayarlar() {
     ? bulunan.claude.filter(m => m.id.startsWith("claude-")).map(m => [m.id, `${new Date(m.tarih) > yeniSinir ? "🆕 " : ""}${m.ad}`])
     : CLAUDE_MODELLERI;
   const secenek = (deger, liste) => liste.map(([d, y]) => `<option value="${esc(d)}" ${String(d) === String(deger) ? "selected" : ""}>${esc(y)}</option>`).join("");
+  // Eski "güncel konu araması ⛔ Yapma" ayarı = hiç haber günü yok
+  const trendGunleri = (a.GOREV_MODELLERI || {}).guncel_konular === "kapali" ? [] : (a.TREND_GUNLERI || []);
   $("#ana").innerHTML = `
-  <div class="kart"><h3>📅 Yayın planı</h3>
+  <nav class="ayarMenu">${[["yayin", "📅 Yayın"], ["icerik", "🧠 İçerik"], ["ses", "🎙️ Ses"], ["goruntu", "🖼️ Görüntü"],
+    ["gorunum", "🎬 Görünüm"], ["yz", "🤖 Yapay zekâ"], ["baglanti", "🔌 Bağlantılar"]].map(([k, ad]) =>
+    `<a href="#a_${k}">${ad}</a>`).join("")}</nav>
+
+  <div class="kart" id="a_yayin"><h3>📅 Yayın ve onay</h3>
+    <label><input type="checkbox" id="duraklat" ${a.URETIM_DURAKLAT ? "checked" : ""}> ⏸️ <b>Otomatik üretimi duraklat</b></label>
+    <p class="ince">Açıkken yeni konu ve video üretilmez (tatil, bakiye bitti…). Zaten hazır / YouTube'a yüklenmiş videolar ve ⚡ ile istediklerin etkilenmez.</p>
     <label>Yayın saatleri (Türkiye) — günde kaç saat yazarsan o kadar video</label>
     <div id="saatler"></div><div class="butonlar"><button id="saatEkle">+ Saat ekle</button></div>
-    <label>Güncel (trend) konu günleri — o gün son video güncel haber olur</label>
-    <div class="gunler">${GUN_ADLARI.map((g, i) => `<label><input type="checkbox" data-gun="${i}" ${a.TREND_GUNLERI.includes(i) ? "checked" : ""}>${g}</label>`).join("")}</div>
-    <label>Günlük en fazla YouTube yüklemesi (kota: en fazla 6)</label>
-    <input type="number" id="limit" min="1" max="6" value="${esc(a.GUNLUK_YUKLEME_LIMITI)}">
+    <label>Günlük videoların süresi</label>
+    <select id="gunlukSure">${sureSecenek(a.GUNLUK_SURE || 30)}</select>
+    <p class="ince">Otomatik üretilen her video bu sürede olur. ⚡ ile istediğin videoda süreyi ayrıca seçersin. Uzun video daha pahalıdır.</p>
     <label>Videolar ne zaman üretilsin?</label>
     <select id="ritim">${secenek(a.URETIM_RITMI, [["gunluk", "Her sabah o günün videoları (konular taze, beklemez)"],
       ["haftalik", "Haftada bir, Perşembe 14 video birden"]])}</select>
-    <label>Videolar YouTube'a ne zaman yüklensin?</label>
-    <select id="onceden">${secenek(String(a.YUKLEME_ONCEDEN_SAAT), [["30", "Yayından ~1 gün önce (önerilen, güvenlik payı var)"],
-      ["14", "Sadece yayın günü sabahı (11:07)"], ["0", "Onaylanınca hemen hepsi (YouTube'da gizli sırada bekler)"]])}</select>
-    <p class="ince">Video yüklenene kadar bizde bekler: başlığını, saatini, senaryosunu serbestçe değiştirebilirsin.</p>
+    <label>Onay</label>
+    <select id="onayModu">${secenek(a.ONAY_MODU === "pazar" && a.OTOMATIK_ONAY === false ? "elle" : a.ONAY_MODU, [
+      ["otomatik", "Tam otomatik — üretilir üretilmez yüklenir (ben bakmam)"],
+      ["pazar", "Ben onaylarım; Pazar 20:00'de reddetmediklerim otomatik onaylanır"],
+      ["elle", "Sadece ben onaylarım (onaylamadığım yüklenmez)"]])}</select>
+    <details style="margin-top:8px"><summary class="alt">Gelişmiş</summary>
+      <label>Videolar YouTube'a ne zaman yüklensin?</label>
+      <select id="onceden">${secenek(String(a.YUKLEME_ONCEDEN_SAAT), [["30", "Yayından ~1 gün önce (önerilen, güvenlik payı var)"],
+        ["14", "Sadece yayın günü sabahı (11:07)"], ["0", "Onaylanınca hemen hepsi (YouTube'da gizli sırada bekler)"]])}</select>
+      <p class="ince">Video yüklenene kadar bizde bekler: başlığını, saatini, senaryosunu serbestçe değiştirebilirsin.</p>
+      <label>Günlük en fazla YouTube yüklemesi (YouTube kotası: en fazla 6)</label>
+      <input type="number" id="limit" min="1" max="6" value="${esc(a.GUNLUK_YUKLEME_LIMITI)}">
+    </details>
   </div>
-  <div class="kart"><h3>🧠 Konular ve yapay zekâ</h3>
+
+  <div class="kart" id="a_icerik"><h3>🧠 İçerik: konular ve senaryo</h3>
     <label>📚 Kanalın konu alanları (her satır bir alan)</label>
     <p class="ince">Kanalın "menüsü": her zaman ilgi çeken (kalıcı) konular bu alanlardan seçilir. Alan eklersen kanal oraya da açılır.</p>
     <textarea id="kategoriler">${esc(a.KATEGORILER.join("\n"))}</textarea>
+    <label>📰 Güncel haber günleri — o gün son video internette bulunan son bilim haberinden olur</label>
+    <div class="gunler">${GUN_ADLARI.map((g, i) => `<label><input type="checkbox" data-gun="${i}" ${trendGunleri.includes(i) ? "checked" : ""}>${g}</label>`).join("")}</div>
+    <p class="ince">Hiçbir gün işaretlemezsen internette haber aranmaz, bütün videolar kalıcı konulardan olur (daha ucuz).</p>
+    <label><input type="checkbox" id="talep" ${a.TALEP_KONTROLU !== false ? "checked" : ""}> 📈 Talep kontrolü: kalıcı konularda 3 kat aday üret, YouTube'da benzer Türkçe Shorts'ların izlenmesine bak, en çok izlenenleri seç</label>
     <label>📝 Konu talimatın (isteğe bağlı)</label>
-    <p class="ince">Alan değil, <b>kural</b>: konu seçerken bütün konulara (güncel haberler dahil) uygulanır ve en önceliklidir. Neye ağırlık verilsin, nelerden kaçınılsın, nasıl bir ton olsun.</p>
+    <p class="ince">Alan değil, <b>kural</b>: konu seçerken bütün konulara (güncel haberler dahil) uygulanır ve en önceliklidir.</p>
     <textarea id="konuNotu" placeholder="ör. Uzay ve antik uygarlıklara ağırlık ver, hastalık konularından kaçın">${esc(a.KONU_NOTU || "")}</textarea>
+    <label>🎯 Yapılmasını istediğin belirli konular (her satır bir konu)</label>
+    <p class="ince">Sıradaki üretimde önce bunlar girer, yapılanlar listeden silinir. Hemen istiyorsan Videolar → ⚡ Yeni video yaptır.</p>
+    <textarea id="ozelKonular" placeholder="ör. Çatalhöyük'te 9000 yıllık evler neden kapısızdı?">${esc((a.OZEL_KONULAR || []).join("\n"))}</textarea>
     <label>✍️ Senaryo talimatın (isteğe bağlı)</label>
     <p class="ince">Konu değil, <b>anlatım</b>: videoda söylenen metinlere, açılış cümlesine, başlık ve açıklamaya uygulanır, en önceliklidir.</p>
     <textarea id="senaryoNotu" placeholder="ör. Daha bilgilendirici ve mantıklı ol, abartma; her videoda bir 'neden' açıklaması olsun">${esc(a.SENARYO_NOTU || "")}</textarea>
-    <label>🎯 Yapılmasını istediğin belirli konular (her satır bir konu)</label>
-    <p class="ince">Tam olarak bu konuların videosu yapılır: sıradaki üretimde önce bunlar girer, yapılanlar listeden silinir. Hemen istiyorsan Videolar → ⚡ Yeni video yaptır.</p>
-    <textarea id="ozelKonular" placeholder="ör. Çatalhöyük'te 9000 yıllık evler neden kapısızdı?">${esc((a.OZEL_KONULAR || []).join("\n"))}</textarea>
-    <label><input type="checkbox" id="talep" ${a.TALEP_KONTROLU !== false ? "checked" : ""}> 📈 Talep kontrolü: kalıcı konularda 3 kat aday üret, YouTube'da benzer Türkçe Shorts'ların izlenmesine bak, en çok izlenenleri seç</label>
-    <label>Maliyet / kalite profili</label>
-    <select id="profil">${secenek(a.MALIYET_PROFILI, [["ekonomik", "Ekonomik (~4-5 $/ay)"], ["dengeli", "Dengeli (~8-9 $/ay)"], ["kalite", "Kalite (~15 $/ay)"]])}</select>
-    <label>Onay modu</label>
-    <select id="onayModu">${secenek(a.ONAY_MODU, [["otomatik", "Tam otomatik — üretilir üretilmez yüklenir"], ["pazar", "Ben onaylarım, Pazar 20:00'de kalanlar otomatik"], ["elle", "Sadece ben onaylarım"]])}</select>
-    <label><input type="checkbox" id="otoOnay" ${a.OTOMATIK_ONAY ? "checked" : ""}> (Pazar modunda) Pazar 20:00'de reddetmediklerimi otomatik onayla</label>
   </div>
-  <div class="kart"><h3>🎙️ Ses</h3>
-    <label>Ses motoru</label><select id="motor">${secenek(a.SES_MOTORU, [["edge", "Edge TTS (ücretsiz)"], ["elevenlabs", "ElevenLabs (daha doğal, ücretli)"], ["ek", "Ek sağlayıcı (Yapay zekâ kartında eklediğin)"]])}</select>
-    <label>ElevenLabs ses kimliği (Voice ID)</label><input id="elSes" value="${esc(a.ELEVENLABS_SES)}">
-    <label>ElevenLabs aboneliğinin bittiği gün (boşsa yok)</label><input type="date" id="elBitis" value="${esc(a.ELEVENLABS_BITIS || "")}">
-    <p class="ince">Bu günden itibaren videolar otomatik ücretsiz Edge sesiyle üretilir (ücretsiz plan şartlarına düşmesin diye).</p>
+
+  <div class="kart" id="a_ses"><h3>🎙️ Ses</h3>
+    <label>Ses motoru</label><select id="motor">${secenek(a.SES_MOTORU, [["edge", "Edge TTS (ücretsiz)"], ["elevenlabs", "ElevenLabs (daha doğal, ücretli)"], ["ek", "Ek sağlayıcı (🔌 Bağlantılar'da eklediğin)"]])}</select>
+    <div id="sesEl">
+      <label>ElevenLabs ses kimliği (Voice ID)</label><input id="elSes" value="${esc(a.ELEVENLABS_SES)}">
+      <label>ElevenLabs aboneliğinin bittiği gün (boşsa yok)</label><input type="date" id="elBitis" value="${esc(a.ELEVENLABS_BITIS || "")}">
+      <p class="ince">Bu günden itibaren videolar otomatik ücretsiz Edge sesiyle üretilir (ücretsiz plan şartlarına düşmesin diye).</p>
+    </div>
     <div id="sesEk" style="${a.SES_MOTORU === "ek" ? "" : "display:none"}">
       <label>Ek sağlayıcı ses modeli</label><select id="sesEkModel"></select>
       <div class="satir"><div><label>Ses adı (sağlayıcının listesinden)</label><input id="sesEkSes" value="${esc(a.SES_EK_SES)}"></div>
         <div><label>Fiyat $ / 1M karakter</label><input type="number" step="0.1" id="sesEkFiyat" value="${esc(a.SES_EK_FIYAT)}"></div></div>
       <p class="ince">Bu sağlayıcılar kelime zamanı vermez; altyazı zamanlaması tahmin edilir (biraz kayabilir).</p>
     </div>
-    <p class="ince">Seçilen ses hata verir ya da kotası biterse o video otomatik Edge sesiyle üretilir.</p>
-    <label>Edge sesi</label><select id="ses">${secenek(a.TTS_SES, [["tr-TR-AhmetNeural", "Ahmet (erkek)"], ["tr-TR-EmelNeural", "Emel (kadın)"]])}</select>
-    <label>Konuşma hızı</label><select id="hiz">${secenek(a.TTS_HIZ, [["+0%", "Normal"], ["+5%", "+%5"], ["+10%", "+%10"], ["+15%", "+%15"], ["+20%", "+%20"]])}</select>
+    <label>Edge sesi ve hızı <span class="ince">(Edge seçiliyse ana ses; diğerleri hata verirse / kotası biterse yedek ses)</span></label>
+    <div class="satir"><div><select id="ses">${secenek(a.TTS_SES, [["tr-TR-AhmetNeural", "Ahmet (erkek)"], ["tr-TR-EmelNeural", "Emel (kadın)"]])}</select></div>
+      <div><select id="hiz">${secenek(a.TTS_HIZ, [["+0%", "Normal hız"], ["+5%", "+%5"], ["+10%", "+%10"], ["+15%", "+%15"], ["+20%", "+%20"]])}</select></div></div>
   </div>
-  <div class="kart"><h3>🌓 Görüntü karartma</h3>
-    <label>Karartma: <b id="kVal">${Math.round(a.KARARTMA * 100)}%</b></label>
-    <input type="range" id="karartma" min="0" max="60" value="${Math.round(a.KARARTMA * 100)}">
-    <p class="ince">Arka plandaki video / fotoğraf ne kadar karartılsın. Koyu görüntü kanala gizemli bir hava verir ve beyaz altyazıyı okunur kılar.
-      %0 = hiç karartma yok (canlı, ama altyazı zor okunabilir), %35 = önerilen, %60 = çok koyu.
-      "Her videoda farklı stil" açıksa her video bu değerin ±%6 yakınında olur.</p>
-  </div>
-  <div class="kart"><h3>🖼️ Görüntüler</h3>
+
+  <div class="kart" id="a_goruntu"><h3>🖼️ Görüntü</h3>
     <p class="alt">Görüntü nereden gelsin? <b>Kullanmak istediklerini işaretle, ▲▼ ile sırala.</b> Her sahne için
       işaretlilerden en üstteki denenir; bulamaz ya da hata verirse (kota bitti, bozuk görsel…) bir alttakine geçilir.</p>
     <div id="kaynakListe"></div>
+    <div id="cfUyari" class="uyari" style="display:none">☁️ Cloudflare işaretli ama hesap numarası boş: <a href="#a_baglanti">🔌 Bağlantılar</a> kartında gir.</div>
     <p class="ince">Yeni bir yapay zekâ sağlayıcısı eklediğinde görsel modelleri bu listeye kendiliğinden gelir (işaretsiz olarak, en alta).</p>
+    <div id="gorselEkAyar" class="satir" style="display:none"><div><label>Yapay zekâ görsel boyutu</label><input id="gorselEkBoyut" value="${esc(a.GORSEL_EK_BOYUT)}"></div>
+      <div><label>Görsel başına $</label><input type="number" step="0.01" id="gorselEkFiyat" value="${esc(a.GORSEL_EK_FIYAT)}"></div></div>
     <label>🔍 Görüntü uygun mu, kontrol edilsin mi?</label>
     <select id="uygunluk">${secenek(a.UYGUNLUK_KONTROLU || "kapali", [
       ["kapali", "Kapalı — ilk bulunan görüntü kullanılır"],
       ["kelime", "Bedava kelime kontrolü (kaba: görüntünün açıklaması aranan kelimeyle uyuşmalı)"],
       ["yapay_zeka", "Yapay zekâ baksın (ucuz model her adaya bakar, ~1 $/ay altı)"],
       ["ikisi", "İkisi birden (önce kelime, sonra yapay zekâ — ucuz ve güvenilir)"]])}</select>
-    <p class="ince">Açıkken uygun bulunmayan görüntü atlanır; sıradaki aday, o da olmazsa listede bir alttaki kaynak denenir
-      (ör. Pexels'te uygun klip yoksa yapay zekâ görseline geçilir). Yapay zekâ görselleri zaten sahneye özel üretildiği için kontrol edilmez.</p>
-    <div id="cfAlan" style="display:none">
-      <label>☁️ Cloudflare hesap numarası (Account ID)</label>
-      <input id="cfHesap" autocomplete="off" placeholder="32 haneli harf/rakam" value="${esc(a.CLOUDFLARE_HESAP || "")}">
-      <p class="ince">Cloudflare → Workers AI → <b>Use REST API</b> sayfasındaki <b>Account ID</b> (ya da tarayıcı adresinde dash.cloudflare.com/ sonrasındaki 32 karakter).
-        Anahtarı (token) aşağıdaki <b>🔑 API anahtarları</b> kartında <b>Cloudflare</b> satırına gir.</p>
-    </div>
-    <div id="gorselEkAyar" class="satir" style="display:none"><div><label>Yapay zekâ görsel boyutu</label><input id="gorselEkBoyut" value="${esc(a.GORSEL_EK_BOYUT)}"></div>
-      <div><label>Görsel başına $</label><input type="number" step="0.01" id="gorselEkFiyat" value="${esc(a.GORSEL_EK_FIYAT)}"></div></div>
+    <p class="ince">Açıkken uygun bulunmayan görüntü atlanır; sıradaki aday, o da olmazsa listede bir alttaki kaynak denenir.
+      Yapay zekâ görselleri zaten sahneye özel üretildiği için kontrol edilmez.</p>
     <label>🎨 Görsel talimatın (isteğe bağlı)</label>
     <p class="ince">Görseller nasıl olsun? Yapay zekâ bu tarife uyar; gerçek görüntü aranırken de arama kelimeleri buna göre seçilir.</p>
     <textarea id="gorselNotu" placeholder="ör. Gerçekçi belgesel fotoğrafı, koyu ve gizemli, sinematik ışık; insan yüzü gösterme, çizgi film olmasın">${esc(a.GORSEL_NOTU || "")}</textarea>
+    <label>🌓 Karartma: <b id="kVal">${Math.round(a.KARARTMA * 100)}%</b></label>
+    <input type="range" id="karartma" min="0" max="60" value="${Math.round(a.KARARTMA * 100)}">
+    <p class="ince">Arka plan ne kadar karartılsın: koyu görüntü gizemli hava verir ve beyaz altyazıyı okunur kılar.
+      %0 = hiç (altyazı zor okunur), %35 = önerilen, %60 = çok koyu. "Her videoda farklı stil" açıksa her video bu değerin ±%6 yakınında olur.</p>
   </div>
-  <div class="kart"><h3>💬 Altyazı ve ekran yazısı</h3>
+
+  <div class="kart" id="a_gorunum"><h3>🎬 Görünüm ve kanal kimliği</h3>
+    <label><input type="checkbox" id="cesit" ${a.GORSEL_CESITLILIK ? "checked" : ""}> Her videoda farklı stil (vurgu rengi, altyazı yeri, karartma ±%6, geçiş, ekrandaki kelime sayısı)</label>
     <div class="satir"><div><label>Altyazı boyutu</label><input type="number" id="aBoyut" min="60" max="140" value="${esc(a.ALTYAZI_BOYUT)}"></div>
-      <div><label>Ekranda kelime</label><input type="number" id="aKelime" min="1" max="5" value="${esc(a.ALTYAZI_KELIME)}"></div></div>
-    <div class="satir"><div><label>Ekran yazısı boyutu</label><input type="number" id="hBoyut" min="60" max="150" value="${esc(a.HOOK_BOYUT)}"></div>
+      <div><label>Ekranda kelime <span class="ince" id="aKelimeNot"></span></label><input type="number" id="aKelime" min="1" max="5" value="${esc(a.ALTYAZI_KELIME)}"></div></div>
+    <div class="satir"><div><label>Ekran yazısı (açılış) boyutu</label><input type="number" id="hBoyut" min="60" max="150" value="${esc(a.HOOK_BOYUT)}"></div>
       <div><label>Ekran yazısı süresi (sn)</label><input type="number" id="hSure" min="1" max="6" step="0.1" value="${esc(a.HOOK_SURE)}"></div></div>
-  </div>
-  <div class="kart"><h3>🎬 Çeşitlilik ve kanal kimliği</h3>
-    <label><input type="checkbox" id="cesit" ${a.GORSEL_CESITLILIK ? "checked" : ""}> Her videoda farklı stil (vurgu rengi, altyazı yeri, karartma, geçiş). Açıkken karartma ve kelime sayısı videoya göre değişir.</label>
     <label><input type="checkbox" id="seriEt" ${a.SERI_ETIKETI ? "checked" : ""}> Videonun üstünde seri adı ve bölüm numarası</label>
     <label><input type="checkbox" id="muzik" ${a.FON_MUZIGI ? "checked" : ""}> Fon müziği + efektler</label>
     <label>Müzik seviyesi: <b id="mVal">${Math.round(a.MUZIK_SESI * 100)}%</b></label>
     <input type="range" id="muzikSes" min="4" max="40" value="${Math.round(a.MUZIK_SESI * 100)}">
     <label><input type="checkbox" id="yorum" ${a.OTOMATIK_YORUM ? "checked" : ""}> Yayından sonra kanal hesabıyla otomatik yorum at</label>
   </div>
-  <div class="kart"><h3>🔑 API anahtarları</h3>
-    <p class="alt">Anahtarı buraya yapıştır → 🔒 Kaydet. Telefonunda şifrelenir, şifreli hâliyle saklanır; panel ve depo anahtarı açık hâlde hiç görmez.
-      Buradan eklenen anahtar GitHub secret'ının önüne geçer. Kaldırırsan varsa GitHub secret'ı kullanılır.</p>
-    <div id="anahtarlar"><p class="alt">Yükleniyor…</p></div>
-  </div>
-  <div class="kart"><h3>🤖 Yapay zekâ modelleri</h3>
-    <p class="alt">Her işi hangi yapay zekânın yapacağını seç. "Varsayılan" = yukarıdaki maliyet profili (Claude).
-      Ek sağlayıcı hata verirse o iş otomatik Claude ile yapılır, video üretimi durmaz.</p>
+
+  <div class="kart" id="a_yz"><h3>🤖 Yapay zekâ ve maliyet</h3>
     <div id="aiHarcama" class="kart" style="margin:8px 0;padding:10px"></div>
+    <label>💵 Aylık bütçe sınırı ($, 0 = sınır yok)</label>
+    <div class="satir"><div><input type="number" id="butce" min="0" step="1" value="${esc(a.AYLIK_BUTCE || 0)}"></div>
+      <div><select id="butceDavranis">${secenek(a.BUTCE_DAVRANIS || "ucuz", [["ucuz", "Aşınca en ucuz modele geç"], ["dur", "Aşınca üretimi durdur"]])}</select></div></div>
+    <p class="ince">Takvim ayı içinde harcanan (🧾) bu tutara ulaşınca uygulanır; ay başında kendiliğinden sıfırlanır. Panelin üstünde uyarı çıkar.</p>
+    <label>Varsayılan kalite seviyesi</label>
+    <select id="profil">${secenek(a.MALIYET_PROFILI, [["ekonomik", "Ekonomik — senaryo Sonnet, doğrulama Haiku, az arama"],
+      ["dengeli", "Dengeli — senaryo Opus, doğrulama Sonnet (önerilen)"], ["kalite", "Kalite — Opus derin düşünür, daha çok arama"]])}</select>
+    <p class="ince">Aşağıda "Varsayılan" bırakılan işler bu seviyeye göre çalışır; bir işe model seçersen o geçerli olur.</p>
     <div id="aiToplam" class="uyari" style="margin:8px 0"></div>
     <div id="gorevler"></div>
     <div class="uyari" style="margin-top:12px"><b>🧪 Test et</b>
@@ -855,24 +876,35 @@ async function ayarlar() {
         Önce 💾 Kaydet, sonra bu düğme. 1-2 dakika sürer, sonuç aşağıda çıkar.</p>
       <button type="button" id="aiTest">🧪 Şimdi test et</button>
       <div id="testSonuc" style="margin-top:8px"></div></div>
-    <p class="ince">🖼️ Sahne görsellerini hangi yapay zekânın yapacağı aşağıdaki <b>🖼️ Görüntüler</b> kartında seçilir.</p>
+    <p class="ince">Ek sağlayıcı hata verirse o iş otomatik Claude ile yapılır, video üretimi durmaz. Sahne görsellerini hangi yapay zekânın yapacağı 🖼️ Görüntü kartında seçilir.</p>
+  </div>
+
+  <div class="kart" id="a_baglanti"><h3>🔌 Bağlantılar</h3>
+    <p class="alt">Dış hizmetlerin anahtarları ve hesap bilgileri. Anahtarlar telefonunda şifrelenir; panel ve depo açık hâlini hiç görmez.</p>
+    <h4>🔑 API anahtarları</h4>
+    <p class="ince">Anahtarı yapıştır → 🔒 Kaydet. Buradan eklenen anahtar GitHub secret'ının önüne geçer; kaldırırsan varsa GitHub secret'ı kullanılır.</p>
+    <div id="anahtarlar"><p class="alt">Yükleniyor…</p></div>
+    <div id="cfAlan">
+      <h4>☁️ Cloudflare hesap numarası (Account ID)</h4>
+      <input id="cfHesap" autocomplete="off" placeholder="32 haneli harf/rakam" value="${esc(a.CLOUDFLARE_HESAP || "")}">
+      <p class="ince">Cloudflare → Workers AI → <b>Use REST API</b> sayfasındaki <b>Account ID</b> (ya da tarayıcı adresinde dash.cloudflare.com/ sonrasındaki 32 karakter).
+        Anahtarını yukarıda <b>Cloudflare</b> satırına gir.</p>
+    </div>
     <details style="margin-top:12px"><summary><b>➕ Ek yapay zekâ sağlayıcıları</b> <span class="alt">(DeepSeek, Gemini, OpenRouter, Groq…)</span></summary>
       <ol class="alt">
         <li>Sağlayıcının sitesinden API anahtarı al.</li>
         <li>Aşağıda "Sağlayıcı 1"i doldur (hazır ayardan şirketi seç) → 💾 Kaydet.</li>
-        <li>Anahtarı yukarıdaki <b>🔑 API anahtarları</b> kartında "Sağlayıcı 1" satırına yapıştır → 🔒 Kaydet.</li>
-        <li>Yukarıdaki listeden işlere ata → 💾 Kaydet.</li>
+        <li>Anahtarı yukarıdaki <b>🔑 API anahtarları</b>'nda "Sağlayıcı 1" satırına yapıştır → 🔒 Kaydet.</li>
+        <li>🤖 Yapay zekâ kartında işlere ata (görsel modelleri 🖼️ Görüntü listesine kendiliğinden gelir) → 💾 Kaydet.</li>
         <li>3 ayrı şirket ekleyebilirsin (Sağlayıcı 1, 2, 3); her birinin anahtarı kendi numarasıyla saklanır.</li>
-        <li>Denemek için: İşler sekmesi → Anahtar testi (her eklenen modele kısa bir soru sorar).</li></ol>
-      <div class="uyari">Not: İnternet araması (güncel konu, bilgi doğrulama) sadece Claude'da var. Bu işleri başka modele verirsen aramasız yapılır — doğruluk düşebilir.</div>
+        <li>Denemek için: 🤖 kartındaki 🧪 Şimdi test et.</li></ol>
+      <div class="uyari">Not: İnternet araması (güncel haber, bilgi doğrulama) sadece Claude'da var. Bu işleri başka modele verirsen aramasız yapılır — doğruluk düşebilir.</div>
       <div id="saglayicilar"></div>
     </details>
+    <p class="ince" style="margin-top:10px">▶️ YouTube izni üstteki <b>🔑 YouTube izni</b> sekmesinden yönetilir.</p>
   </div>
-  <div class="kart"><h3>🔑 YouTube izni</h3>
-    <label><input type="checkbox" id="suresiz" ${a.IZIN_SURESIZ ? "checked" : ""}> Google uygulaması yayında ("In production") → izin süresiz, 7 günlük geri sayım ve uyarılar kapanır</label>
-  </div>
-  <div class="butonlar"><button class="ana" id="ayarKaydet">💾 Kaydet</button></div>
-  <p class="ince">Değişiklikler bir sonraki üretimde (her Perşembe ya da "Şimdi üretimi başlat") geçerli olur.</p>`;
+  <div class="kaydetCubugu"><button class="ana" id="ayarKaydet">💾 Kaydet</button>
+    <span class="ince">Değişiklikler bir sonraki üretimde geçerli olur.</span></div>`;
   const saatCiz = liste => {
     $("#saatler").innerHTML = liste.map((s, i) => `<div class="satir" style="margin-bottom:6px">
       <input type="time" class="saat" value="${esc(s)}"><button data-sil="${i}" style="flex:0">✕</button></div>`).join("");
@@ -915,6 +947,7 @@ async function ayarlar() {
   })).filter(s => s.ad && s.base_url && s.modeller.length);
   let gorevSecim = {...(a.GOREV_MODELLERI || {})};
   if (a.BILGI_DOGRULAMA === false && !gorevSecim.dogrulama) gorevSecim.dogrulama = "kapali";
+  if (gorevSecim.guncel_konular === "kapali") delete gorevSecim.guncel_konular;   // artık İçerik → haber günleriyle yönetiliyor
   const gorevCiz = liste => {
     document.querySelectorAll("[data-gorev]").forEach(x => gorevSecim[x.dataset.gorev] = x.value);
     const ekler = liste.flatMap(s => s.modeller.map(m => [`ek${s.yuva}:${m}`, `${s.ad} · ${m}`]));
@@ -939,7 +972,7 @@ async function ayarlar() {
     $("#gorevler").innerHTML = Object.entries(GOREVLER).map(([k, ad]) => {
       const l = [...secenekler, ...(KAPATILABILIR.has(k) ? [["kapali", "⛔ Yapma (bu iş kapalı)"]] : [])];
       if (gorevSecim[k] && !l.some(([v]) => v === gorevSecim[k])) l.push([gorevSecim[k], gorevSecim[k] + " (listede yok)"]);
-      return `<label>${esc(ad)}${KAPATILABILIR.has(k) ? "" : ' <span class="ince">(zorunlu)</span>'}</label>
+      return `<label>${esc(ad)}${k === "guncel_konular" ? ' <span class="ince">(hangi günler: 🧠 İçerik → haber günleri)</span>' : KAPATILABILIR.has(k) ? "" : ' <span class="ince">(zorunlu)</span>'}</label>
       <select data-gorev="${k}">${l.map(([v, t]) => `<option value="${esc(v)}" ${(gorevSecim[k] || "") === v ? "selected" : ""}>${esc(t)} — ${dolar(aylikMaliyet(k, v, ta))}/ay</option>`).join("")}</select>
       <p class="ince" style="margin-top:2px" data-tahmin="${k}"></p>
       ${GOREV_KAPALI_NOTU[k] ? `<p class="ince" style="margin-top:2px">⛔ seçilirse: ${GOREV_KAPALI_NOTU[k]}</p>` : ""}`;
@@ -1028,11 +1061,17 @@ async function ayarlar() {
     document.querySelectorAll("[data-ky]").forEach(b => b.onclick = () => tasi(+b.dataset.ky, +b.dataset.ky - 1));
     document.querySelectorAll("[data-ka]").forEach(b => b.onclick = () => tasi(+b.dataset.ka, +b.dataset.ka + 1));
     const acikAi = kaynakDurum.filter(x => x.acik && x.k.startsWith("ai:"));
-    $("#cfAlan").style.display = acikAi.some(x => x.k.startsWith("ai:cloudflare:")) ? "" : "none";
+    $("#cfUyari").style.display = acikAi.some(x => x.k.startsWith("ai:cloudflare:")) && !$("#cfHesap").value.trim() ? "" : "none";
     $("#gorselEkAyar").style.display = acikAi.some(x => !x.k.startsWith("ai:cloudflare:")) ? "" : "none";
   };
   kaynakCiz([]);
-  $("#motor").onchange = e => $("#sesEk").style.display = e.target.value === "ek" ? "" : "none";
+  const sesCiz = () => { const m = $("#motor").value;
+    $("#sesEk").style.display = m === "ek" ? "" : "none"; $("#sesEl").style.display = m === "elevenlabs" ? "" : "none"; };
+  $("#motor").onchange = sesCiz; sesCiz();
+  const kelimeCiz = () => { const c = $("#cesit").checked; $("#aKelime").disabled = c;
+    $("#aKelimeNot").textContent = c ? "(farklı stil açıkken her videoda 2-3)" : ""; };
+  $("#cesit").addEventListener("change", kelimeCiz); kelimeCiz();
+  $("#cfHesap").addEventListener("input", () => kaynakCiz());
   const anahtarCiz = async () => {
     let d;
     try { d = await kasaDurumu(); } catch (e) { $("#anahtarlar").innerHTML = `<div class="hata">${esc(e.message)}</div>`; return; }
@@ -1102,16 +1141,17 @@ async function ayarlar() {
       KATEGORILER: $("#kategoriler").value.split("\n").map(x => x.trim()).filter(Boolean),
       KONU_NOTU: $("#konuNotu").value.trim(), TALEP_KONTROLU: $("#talep").checked, SENARYO_NOTU: $("#senaryoNotu").value.trim(), GORSEL_NOTU: $("#gorselNotu").value.trim(), CLOUDFLARE_HESAP: $("#cfHesap").value.trim(), UYGUNLUK_KONTROLU: $("#uygunluk").value,
       OZEL_KONULAR: $("#ozelKonular").value.split("\n").map(x => x.trim()).filter(Boolean),
-      MALIYET_PROFILI: $("#profil").value, BILGI_DOGRULAMA: ($("[data-gorev='dogrulama']") || {}).value !== "kapali", OTOMATIK_ONAY: $("#otoOnay").checked,
+      MALIYET_PROFILI: $("#profil").value, BILGI_DOGRULAMA: ($("[data-gorev='dogrulama']") || {}).value !== "kapali", OTOMATIK_ONAY: $("#onayModu").value !== "elle",
       ONAY_MODU: $("#onayModu").value,
       TTS_SES: $("#ses").value, TTS_HIZ: $("#hiz").value,
       SES_MOTORU: $("#motor").value, ELEVENLABS_SES: $("#elSes").value.trim() || VARSAYILAN_AYARLAR.ELEVENLABS_SES, KARARTMA: +$("#karartma").value / 100,
-      VIDEO_KLIP_ONCELIKLI: true,
       ALTYAZI_BOYUT: +$("#aBoyut").value, ALTYAZI_KELIME: +$("#aKelime").value,
       HOOK_BOYUT: +$("#hBoyut").value, HOOK_SURE: +$("#hSure").value,
       GORSEL_CESITLILIK: $("#cesit").checked, SERI_ETIKETI: $("#seriEt").checked, FON_MUZIGI: $("#muzik").checked,
       MUZIK_SESI: +$("#muzikSes").value / 100, OTOMATIK_YORUM: $("#yorum").checked,
-      IZIN_SURESIZ: $("#suresiz").checked, ELEVENLABS_BITIS: $("#elBitis").value || "",
+      ELEVENLABS_BITIS: $("#elBitis").value || "",
+      URETIM_DURAKLAT: $("#duraklat").checked, GUNLUK_SURE: +$("#gunlukSure").value || 30,
+      AYLIK_BUTCE: Math.max(0, +$("#butce").value || 0), BUTCE_DAVRANIS: $("#butceDavranis").value,
       EK_SAGLAYICILAR: saglayicilariOku(),
       SES_EK_MODEL: $("#sesEkModel").value, SES_EK_SES: $("#sesEkSes").value.trim() || "alloy", SES_EK_FIYAT: +$("#sesEkFiyat").value || 0,
       GORSEL_KAYNAKLARI: kaynakDurum.filter(x => x.acik).map(x => x.k),
@@ -1301,10 +1341,38 @@ async function izinSeridi() {
     s.onclick = () => sekmeAc("izin");
   } catch (e) {}
 }
+// Üstteki uyarılar: bot'un yazdığı uyari.json (bakiye bitti vb.), duraklatma, bütçe, son başarısız iş
+async function uyariSeridi() {
+  try {
+    const [ayar, uyari, mal, isler] = await Promise.all([dosyaOku("ayarlar.json", {}), dosyaOku("uyari.json", {}),
+      dosyaOku("maliyet.json", []), gh(`/repos/${DEPO}/actions/runs?per_page=20`).then(r => r.json()).catch(() => ({}))]);
+    const satir = [];
+    Object.values(uyari || {}).forEach(u => satir.push(["kirmizi", `🚨 <b>${esc(u.baslik)}</b>${u.cozum ? `<div class="ince">👉 ${esc(u.cozum)}</div>` : ""}
+      <div class="ince">${esc(new Date(u.zaman).toLocaleString("tr-TR", {day: "numeric", month: "long", hour: "2-digit", minute: "2-digit"}))}</div>`]));
+    if (ayar.URETIM_DURAKLAT) satir.push(["sari", `⏸️ <b>Otomatik üretim duraklatıldı.</b> <span class="ince">Ayarlar → 📅 Yayın ve onay'dan aç.</span>`]);
+    const limit = +ayar.AYLIK_BUTCE || 0;
+    if (limit > 0) {
+      const ay = new Date(Date.now() + 3 * 3600e3).toISOString().slice(0, 7);
+      const harcanan = (mal || []).filter(k => String(k.zaman).startsWith(ay)).reduce((t, k) => t + (k.usd || 0), 0);
+      if (harcanan >= limit * 0.8) satir.push([harcanan >= limit ? "kirmizi" : "sari",
+        `💵 Bu ay ${harcanan.toFixed(2)} $ / ${limit} $ bütçe${harcanan >= limit ? (ayar.BUTCE_DAVRANIS === "dur" ? " — <b>doldu, otomatik üretim durdu</b>" : " — <b>doldu, en ucuz modelle devam ediliyor</b>") : " (%80'i geçti)"}`]);
+    }
+    if (!(uyari || {}).bakiye) {
+      const izlenen = ["Haftalık Video Üretimi", "Videoyu Yeniden Üret", "Onay ve YouTube Yükleme"];
+      const son = {};
+      (isler.workflow_runs || []).filter(x => x.status === "completed").forEach(x => { if (!son[x.name]) son[x.name] = x; });
+      Object.values(son).filter(x => izlenen.includes(x.name) && x.conclusion === "failure").forEach(x => satir.push(["kirmizi",
+        `❌ Son <b>${esc(x.name)}</b> işi başarısız oldu (${new Date(x.created_at).toLocaleString("tr-TR", {day: "numeric", month: "long", hour: "2-digit", minute: "2-digit"})}).
+        <a href="${esc(x.html_url)}" target="_blank" style="color:inherit">Ayrıntı</a> · <span class="ince">Bir sonraki başarılı işte bu uyarı kalkar.</span>`]));
+    }
+    $("#uyariSerit").innerHTML = satir.map(([tur, h]) => `<div class="${tur === "kirmizi" ? "kirmiziSerit" : "uyari"}" style="margin-top:8px">${h}</div>`).join("");
+  } catch (e) {}
+}
 async function basla() {
   if (!TOKEN) return kurulumEkrani();
   $("#sekmeler").style.display = "";
   izinSeridi(); setInterval(izinSeridi, 10 * 60 * 1000);
+  uyariSeridi(); setInterval(uyariSeridi, 5 * 60 * 1000);
   try { const u = await (await gh("/user")).json(); $("#kullanici").textContent = u.login || ""; } catch (e) {}
   sekmeAc("videolar");
 }
