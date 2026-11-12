@@ -450,6 +450,32 @@ async function videolar() {
   });
   document.querySelectorAll("[data-islem]").forEach(b => b.onclick = () => videoIslem(b.dataset.islem, b.dataset.id, b));
   kararCubugu();
+  denemeDugmeleri();
+}
+
+// Görsel karşılaştırma videoları (<id>_deneme_<etiket>.mp4) varsa kartına "🆚 izle" düğmesi
+async function denemeDugmeleri() {
+  const etiketler = [...new Set(PLAN.filter(v => v.release && document.getElementById("deneme_" + v.id)).map(v => v.release))];
+  for (const et of etiketler) {
+    let rel; try { rel = await releaseAl(et); } catch (e) { continue; }
+    for (const a of (rel && rel.assets) || []) {
+      const m = a.name.match(/^(.+)_deneme_(.+)\.mp4$/);
+      const kutu = m && document.getElementById("deneme_" + m[1]);
+      if (!kutu || kutu.querySelector(`[data-ad="${CSS.escape(a.name)}"]`)) continue;
+      const btn = document.createElement("button");
+      btn.dataset.ad = a.name; btn.textContent = `🆚 Karşılaştırma: ${m[2]}`;
+      btn.onclick = async () => {
+        const eski = btn.textContent; btn.disabled = true; btn.textContent = "⏳";
+        try {
+          const v = PLAN.find(x => x.id === m[1]);
+          const url = URL.createObjectURL(await videoBlob(v, a.name));
+          $("#oynat_" + m[1]).innerHTML = `<div class="ince">🆚 ${esc(m[2])} sürümü (sadece deneme, yayınlanmadı)</div><video src="${url}" controls autoplay playsinline></video>`;
+        } catch (e) { bildir("❌ " + e.message, 5000); }
+        btn.disabled = false; btn.textContent = eski;
+      };
+      kutu.appendChild(btn);
+    }
+  }
 }
 
 function videoKarti(v) {
@@ -484,6 +510,7 @@ function videoKarti(v) {
     ${v.silinecek ? `<span class="rozet red">🗑️ YouTube'dan silinecek</span>` : ""}
     ${(v.kalite_hatasi || []).length ? `<span class="rozet red">🚫 kalite kontrolünden geçmedi</span><p class="ince">${esc(v.kalite_hatasi.join(" · "))} — ${v.durum === "reddedildi" ? "yayınlanmadı; 🔁 ile yeniden ürettirebilirsin." : "sıradaki çalışmada yeniden üretilecek."}</p>` : ""}
     ${(v.kalite_uyari || []).length ? `<p class="ince">🔎 Kalite notu: ${esc(v.kalite_uyari.join(" · "))}</p>` : ""}
+    ${v.onay_bekle && ["bekliyor", "seslendirildi", "video_hazir"].includes(v.durum) ? `<span class="rozet hazir">👀 önce sen izleyeceksin — ${v.durum === "video_hazir" ? "▶️ İzle, beğenirsen ✅ Onayla" : "hazır olunca seni bekleyecek"}</span>` : ""}
     ${v.elle_duzenlendi ? `<span class="rozet">✏️ elle düzenlendi</span>` : ""}
     ${v.yorum_id || (YORUMLAR || {})[v.id] ? `<span class="rozet">💬 yorum atıldı</span>` : ""}
     ${v.baslik && v.konu !== v.baslik ? `<div class="alt" style="margin-top:6px">Konu: ${esc(v.konu)}</div>` : ""}
@@ -496,6 +523,7 @@ function videoKarti(v) {
         v.hook_secenekleri.map(h => (h === (v.cumleler || [])[0] ? "🏆 " : "• ") + esc(h)).join("<br>")}</div>` : ""}
     </details>` : ""}
     <div class="butonlar">${b}</div>
+    <div class="butonlar" id="deneme_${id}"></div>
     <div id="oynat_${id}"></div>
     <div class="yukleme" id="yb_${id}"><i></i></div>
   </div>`;
@@ -516,6 +544,8 @@ function yeniVideoModal() {
     <select id="yZamanTur"><option value="hemen">Hazır olur olmaz hemen</option><option value="saat">Belirli bir saatte</option></select>
     <div id="ySaatKutu" style="display:none"><label>Yayın tarihi ve saati (Türkiye saati)</label>
       <input type="datetime-local" id="yZaman" value="${varsayilan}"></div>
+    <label style="display:flex;gap:8px;align-items:center;margin-top:10px"><input type="checkbox" id="yOnceIzle" style="width:auto">
+      👀 Yayınlamadan önce ben izleyeyim (hazır olunca bekler, ✅ Onayla deyince yayınlanır)</label>
     <details><summary class="alt">İsteğe bağlı: kendi başlığın / senaryon</summary>
       <label>YouTube başlığı (boşsa yapay zekâ yazar)</label><input id="yBaslik" maxlength="95">
       <label>Kendi senaryon (her satır bir cümle = bir sahne; boşsa yapay zekâ yazar)</label>
@@ -528,7 +558,8 @@ function yeniVideoModal() {
     const konu = $("#yKonu").value.trim();
     if (konu.length < 5) return bildir("Konuyu biraz daha açık yaz.");
     const istek = {mod: "yeni", konu, sure: +$("#ySure").value, baslik: $("#yBaslik").value.trim(),
-                   cumleler: $("#ySenaryo").value.split("\n").map(x => x.trim()).filter(Boolean)};
+                   cumleler: $("#ySenaryo").value.split("\n").map(x => x.trim()).filter(Boolean),
+                   once_izle: $("#yOnceIzle").checked};
     if ($("#yZamanTur").value === "saat") {
       const z = $("#yZaman").value;
       if (!z) return bildir("Saat seç.");
@@ -560,6 +591,8 @@ function bilgiModal(v) {
     ${grup === "zamanli" || grup === "yayinda" ? `<div class="uyari">Bu video YouTube'da; değişiklik birkaç dakika içinde YouTube'a da işlenir.</div>` : ""}
     ${v.durum === "bekliyor" ? `<label>Konu (henüz üretilmedi — üretimde bu konu işlenir)</label><input id="bKonu" value="${esc(v.konu)}">
       <label>Video süresi</label><select id="bSure">${sureSecenek(v.hedef_sure)}</select>${SURE_NOTU}` : ""}
+    ${["bekliyor", "seslendirildi", "video_hazir"].includes(v.durum) ? `<label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="bOnceIzle" style="width:auto" ${v.onay_bekle ? "checked" : ""}>
+      👀 Yayınlamadan önce ben izleyeyim (otomatik onaylanmaz)</label>` : ""}
     <label>YouTube başlığı</label><input id="bBaslik" maxlength="95" value="${esc(v.baslik || "")}" placeholder="${v.durum === "bekliyor" ? "Boş bırakırsan Claude yazar" : ""}">
     <label>YouTube açıklaması</label><textarea id="bAciklama" style="min-height:80px">${esc(v.aciklama || "")}</textarea>
     ${saatDegisir ? `<label>Yayın tarihi ve saati (Türkiye saati)</label>
@@ -571,6 +604,7 @@ function bilgiModal(v) {
     const istek = {id: v.id, baslik: $("#bBaslik").value.trim(), aciklama: $("#bAciklama").value.trim()};
     if ($("#bKonu")) istek.konu = $("#bKonu").value.trim();
     if ($("#bSure")) istek.sure = +$("#bSure").value;
+    if ($("#bOnceIzle") && $("#bOnceIzle").checked !== !!v.onay_bekle) istek.once_izle = $("#bOnceIzle").checked;
     if ($("#bZaman")) {
       const z = $("#bZaman").value.replace("T", " ").slice(0, 16);
       if (z && z !== v.yayinlanma) {
