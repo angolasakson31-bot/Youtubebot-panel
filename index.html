@@ -380,11 +380,126 @@ function bekleyenVar(id) {
 }
 let VIDEO_FILTRE = (() => { try { return localStorage.getItem("ytb_filtre") || "sirada"; } catch (e) { return "sirada"; } })();
 
+// ─── 📋 Sıradaki videolar: önümüzdeki yayın saatleri, konuları ve ne zaman üretilip yükleneceği ───
+let AYAR_VID = {};
+const vAyar = k => (AYAR_VID && AYAR_VID[k] !== undefined) ? AYAR_VID[k] : VARSAYILAN_AYARLAR[k];
+const KONU_ONCEDEN_SAAT = 26 + 24;      // ayarlar.py: URETIM_PENCERE_SAAT + 24 × KONU_ONCEDEN_GUN
+const URETIM_PENCERE = 26;
+const trSaat = d => new Date(d.getTime() + 3 * 3600e3);            // Türkiye saati (UTC+3) görünümü
+function trTarih(gunEk, saat) {                                     // Türkiye'de bugün+gunEk günü, "HH:MM" → Date
+  const t = trSaat(new Date()); const [h, m] = saat.split(":").map(Number);
+  return new Date(Date.UTC(t.getUTCFullYear(), t.getUTCMonth(), t.getUTCDate() + gunEk, h - 3, m));
+}
+function zamanKisa(d) {
+  const t = trSaat(d), bugun = trSaat(new Date());
+  const gunFark = Math.round((Date.UTC(t.getUTCFullYear(), t.getUTCMonth(), t.getUTCDate()) -
+    Date.UTC(bugun.getUTCFullYear(), bugun.getUTCMonth(), bugun.getUTCDate())) / 864e5);
+  const gun = gunFark === 0 ? "bugün" : gunFark === 1 ? "yarın" : gunFark === -1 ? "dün" : `${t.getUTCDate()} ${AY_ADLARI[t.getUTCMonth()]}`;
+  return `${gun} ${String(t.getUTCHours()).padStart(2, "0")}:${String(t.getUTCMinutes()).padStart(2, "0")}`;
+}
+// Günlük işler 07:17 ve 10:17 (yedek) çalışır: yayına ≤ saat kalan ilk çalışma zamanı
+function ilkCalisma(yayin, saat, saatler = ["07:17", "10:17"]) {
+  for (let g = 0; g < 10; g++) for (const s of saatler) {
+    const t = trTarih(g, s);
+    if (t > new Date() && (yayin - t) / 3600e3 <= saat) return t;
+  }
+  return null;
+}
+function siradakiSatirlar() {
+  const simdi = new Date(), sinir = new Date(simdi.getTime() + 3 * 864e5);
+  const satirlar = PLAN.filter(v => v.durum !== "reddedildi" && !(v.durum === "yuklendi" && yayinZamani(v) <= simdi)
+      && yayinZamani(v) <= sinir && !(v.hemen && v.durum === "yuklendi"))
+    .map(v => ({v, zaman: yayinZamani(v)}));
+  if (vAyar("URETIM_RITMI") === "gunluk") {
+    for (let g = 0; g < 4; g++) for (const s of vAyar("YAYINLANMA_SAATLERI") || []) {
+      const z = trTarih(g, s);
+      if (z <= new Date(simdi.getTime() + 2 * 3600e3) || z > sinir) continue;
+      if (satirlar.some(x => Math.abs(x.zaman - z) <= 90 * 60e3)) continue;
+      satirlar.push({bos: true, zaman: z});
+    }
+  }
+  return satirlar.sort((a, b) => a.zaman - b.zaman);
+}
+function siradakiAlan() {
+  const satirlar = siradakiSatirlar();
+  const gunluk = vAyar("URETIM_RITMI") === "gunluk", mod = vAyar("ONAY_MODU"), once = +vAyar("YUKLEME_ONCEDEN_SAAT");
+  const bekleyenKonu = id => BEKLEYEN.find(i => (i.duzenle || []).some(d => d.id === id && d.konu));
+  const satir = x => {
+    const v = x.v, z = x.zaman;
+    let konu, uretim, yukleme, dugme = "";
+    if (x.bos) {
+      const secim = ilkCalisma(z, KONU_ONCEDEN_SAAT, ["07:17"]);
+      const plan = BEKLEYEN.find(i => (i.planla || []).some(p => p.yayinlanma === trSaat(z).toISOString().slice(0, 16).replace("T", " ")));
+      konu = plan ? `<i>⏳ senin konun eklenecek: ${esc(plan.planla[0].konu)}</i>` : `<span class="alt">Konu henüz seçilmedi — ${secim ? zamanKisa(secim) : "sıradaki çalışmada"} sistem seçecek</span>`;
+      uretim = `${zamanKisa(ilkCalisma(z, URETIM_PENCERE) || z)}`;
+      yukleme = "üretimden hemen sonra";
+      dugme = `<button data-konu-degis="" data-zaman="${z.toISOString()}">✏️ Konuyu ben belirleyeyim</button>`;
+    } else {
+      const bk = bekleyenKonu(v.id);
+      konu = `<b>${esc(v.baslik || v.konu)}</b>${v.baslik && v.baslik !== v.konu ? `<div class="ince">Konu: ${esc(v.konu)}</div>` : ""}`
+        + (bk ? `<div class="ince">⏳ yeni konu işleniyor: ${esc(bk.duzenle.find(d => d.id === v.id).konu)}</div>` : "");
+      if (v.durum === "bekliyor") {
+        const t = gunluk ? ilkCalisma(z, URETIM_PENCERE) : null;
+        uretim = v.hemen ? "hemen" : gunluk ? (t ? zamanKisa(t) : "sıradaki çalışmada") : "Perşembe üretiminde";
+        dugme = `<button data-konu-degis="${esc(v.id)}">✏️ Konuyu değiştir</button>`;
+      } else uretim = (v.kalite_hatasi || []).length ? "🚫 kalite hatası — yeniden denenecek" : "✅ üretildi";
+      if (v.durum === "yuklendi") yukleme = "✅ YouTube'da (gizli, zamanlı)";
+      else if (v.onay_bekle) yukleme = "👀 sen onaylayınca";
+      else if (mod !== "otomatik" && !v.panel_istegi) yukleme = "senin onayından sonra";
+      else if (v.hemen || !once) yukleme = "üretimden hemen sonra";
+      else {
+        const t = ilkCalisma(z, once, ["07:17", "10:17", "11:07"]);
+        yukleme = ["bekliyor", "seslendirildi"].includes(v.durum) ? "üretimden hemen sonra" : t ? `${zamanKisa(t)} civarı` : "sıradaki yüklemede";
+      }
+    }
+    return `<div style="padding:10px 0;border-top:1px solid var(--cizgi)">
+      <div class="satir" style="justify-content:space-between"><b>📺 ${x.v && x.v.hemen ? "hazır olunca hemen" : zamanKisa(z)}</b>
+        <span class="alt">${x.bos ? "boş saat" : {bekliyor: "📝 konu hazır", seslendirildi: "🎙️ seslendirildi", video_hazir: "🎬 video hazır", onaylandi: "📤 yüklenecek", yuklendi: "⏰ YouTube'da"}[v.durum] || esc(v.durum)}</span></div>
+      <div style="margin:4px 0">${konu}</div>
+      <div class="ince">🛠️ Üretim: ${uretim} · ☁️ YouTube'a yükleme: ${yukleme} · 👁️ Herkese açık: ${x.v && x.v.hemen ? "yüklenince" : zamanKisa(z)}</div>
+      ${dugme ? `<div class="butonlar" style="margin-top:6px">${dugme}</div>` : ""}</div>`;
+  };
+  return `<div class="kart"><b>📋 Sıradaki videolar</b> <span class="ince">· önümüzdeki 3 gün</span>
+    <p class="ince" style="margin:4px 0 0">Konular yayından 1 gün önce seçilir, video yayın günü sabahı üretilir. Üretilmeden önce konuyu değiştirebilirsin.</p>
+    ${satirlar.length ? satirlar.map(satir).join("") : `<p class="alt">Önümüzdeki 3 günde planlı video yok.</p>`}
+    ${gunluk ? "" : `<p class="ince">Haftalık ritimde boş saatler Perşembe üretiminde doldurulur.</p>`}
+    <p class="ince">Saatler yaklaşıktır: GitHub zamanlanmış işleri bazen gecikmeli başlatır.</p></div>`;
+}
+function konuModal(id, zamanIso) {
+  const v = id ? PLAN.find(x => x.id === id) : null;
+  const z = v ? yayinZamani(v) : new Date(zamanIso);
+  const yakin = (z - new Date()) / 3600e3 <= URETIM_PENCERE;
+  modalAc(`<h3>✏️ ${v ? "Konuyu değiştir" : "Bu saatin konusunu belirle"}</h3>
+    <p class="alt">📺 ${zamanKisa(z)} yayını${v ? ` · şu anki konu: <b>${esc(v.konu)}</b>` : ""}</p>
+    <label>Yeni konu (ne anlatsın? ne kadar ayrıntı verirsen o kadar iyi)</label>
+    <textarea id="kKonu" style="min-height:80px">${v ? esc(v.konu) : ""}</textarea>
+    ${v ? "" : `<label>Video süresi</label><select id="kSure">${sureSecenek(vAyar("GUNLUK_SURE") || 30)}</select>`}
+    <p class="ince">${yakin && !v ? "Bu yayına az kaldığı için video hemen üretilecek." : "Video yayın günü sabahı bu konuyla üretilir."}</p>
+    <div class="butonlar"><button onclick="modalKapat()">Vazgeç</button><button class="ana" id="kGonder">💾 Kaydet</button></div>`);
+  $("#kGonder").onclick = async () => {
+    const konu = $("#kKonu").value.trim();
+    if (konu.length < 5) return bildir("Konuyu biraz daha açık yaz.");
+    $("#kGonder").disabled = true;
+    try {
+      const zaman = trSaat(z).toISOString().slice(0, 16).replace("T", " ");
+      if (v) {
+        if (v.durum !== "bekliyor") throw new Error("Bu video üretildi; konusu artık değiştirilemez.");
+        await kuyrugaEkle("onay.json", {duzenle: [{id: v.id, konu}]}, `konu değiştir ${v.id}`);
+      } else if (yakin) {
+        await kuyrugaEkle("yeniden.json", {mod: "yeni", konu, yayinlanma: zaman, sure: +$("#kSure").value}, `yeni video: ${konu.slice(0, 40)}`);
+      } else {
+        await kuyrugaEkle("onay.json", {planla: [{yayinlanma: zaman, konu, sure: +$("#kSure").value}]}, `konu planla ${zaman}`);
+      }
+      modalKapat(); bildir("✅ Kaydedildi. Birkaç dakika içinde listede görünür (↻ ile yenile).", 5000); videolar();
+    } catch (e) { bildir("❌ " + e.message, 6000); $("#kGonder").disabled = false; }
+  };
+}
+
 async function videolar() {
   $("#ana").innerHTML = `<p class="alt">Yükleniyor…</p>`;
   let maliyet;
-  [PLAN, BEKLEYEN, YORUMLAR, maliyet] = await Promise.all([dosyaOku("haftalik_plan.json", []), bekleyenIstekler(),
-    dosyaOku("yorumlar.json", {}), dosyaOku("maliyet.json", [])]);
+  [PLAN, BEKLEYEN, YORUMLAR, maliyet, AYAR_VID] = await Promise.all([dosyaOku("haftalik_plan.json", []), bekleyenIstekler(),
+    dosyaOku("yorumlar.json", {}), dosyaOku("maliyet.json", []), dosyaOku("ayarlar.json", {})]);
   VIDEO_MALIYET = {};
   for (const k of (Array.isArray(maliyet) ? maliyet : [])) {
     if (!k.video) continue;
@@ -409,6 +524,7 @@ async function videolar() {
         `<button data-filtre="${k}" class="${VIDEO_FILTRE === k ? "aktif ana" : ""}">${ad}</button>`).join("")}
       <button id="yenile">↻</button><button id="uretBaslat">▶️ Üretimi başlat</button>
       <button id="yeniVideo" class="ana">⚡ Yeni video yaptır</button></nav>`;
+  html += siradakiAlan();
   const yeniBekleyen = BEKLEYEN.filter(i => i.mod === "yeni");
   if (yeniBekleyen.length) html += `<div class="kart"><b>⚡ Hazırlanan yeni videoların</b>${yeniBekleyen.map(i =>
     `<div class="alt">⏳ ${esc(i.konu)} — ${i.yayinlanma ? esc(i.yayinlanma.replace("T", " ")) : "hazır olunca hemen"}</div>`).join("")}
@@ -449,6 +565,7 @@ async function videolar() {
     kararCubugu(); videolar();
   });
   document.querySelectorAll("[data-islem]").forEach(b => b.onclick = () => videoIslem(b.dataset.islem, b.dataset.id, b));
+  document.querySelectorAll("[data-konu-degis]").forEach(b => b.onclick = () => konuModal(b.dataset.konuDegis, b.dataset.zaman));
   kararCubugu();
   denemeDugmeleri();
 }
