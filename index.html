@@ -336,10 +336,10 @@ async function releaseAl(etiket) {
   RELEASES[etiket] = r.status === 404 ? null : await r.json();
   return RELEASES[etiket];
 }
-async function assetBul(v) {
+async function assetBul(v, ad) {
   if (!v.release) return null;
   const rel = await releaseAl(v.release);
-  return rel ? {rel, asset: (rel.assets || []).find(a => a.name === v.id + ".mp4")} : null;
+  return rel ? {rel, asset: (rel.assets || []).find(a => a.name === (ad || v.id + ".mp4"))} : null;
 }
 
 const AY_ADLARI = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
@@ -461,14 +461,15 @@ function videoKarti(v) {
   if (v.durum === "video_hazir") b += `
     <button data-islem="onay" data-id="${id}" class="${karar === "onay" ? "sec-onay" : ""}">✅ Onayla</button>
     <button data-islem="red" data-id="${id}" class="${karar === "red" ? "sec-red" : ""}">❌ Reddet</button>`;
-  if (v.release) b += `<button data-islem="izle" data-id="${id}">▶️ İzle</button>
+  if (v.kalite_dosya && (v.kalite_hatasi || []).length) b += `<button data-islem="hataliIzle" data-id="${id}">▶️ Hatalı hâlini izle</button>`;
+  if (v.release && !["bekliyor", "seslendirildi"].includes(v.durum)) b += `<button data-islem="izle" data-id="${id}">▶️ İzle</button>
     <button data-islem="indir" data-id="${id}">⬇️ İndir</button>`;
   if (v.youtube_id) b += `<a class="btn" target="_blank" href="https://youtube.com/shorts/${esc(v.youtube_id)}">📺 YouTube</a>`;
   if (grup !== "red") b += `<button data-islem="bilgi" data-id="${id}">✏️ Başlık / saat${v.durum === "bekliyor" ? " / konu" : ""}</button>`;
   if (["onay", "sirada", "zamanli"].includes(grup) && !v.hemen)
     b += `<button data-islem="hemen" data-id="${id}">🚀 Hemen yayınla</button>`;
   if (grup === "zamanli") b += `<button data-islem="sil" data-id="${id}">🗑️ YouTube'dan sil</button>`;
-  if (!["yuklendi", "bekliyor", "seslendirildi"].includes(v.durum)) b += `
+  if (!["yuklendi", "bekliyor"].includes(v.durum) && (v.durum !== "seslendirildi" || (v.kalite_hatasi || []).length)) b += `
     <button data-islem="duzenle" data-id="${id}">🔁 Senaryo / yeniden üret</button>
     <button data-islem="kendi" data-id="${id}">📤 Kendi videomu yükle</button>`;
   const cumleler = (v.cumleler || []).map(c => `<p>${esc(c)}</p>`).join("");
@@ -612,8 +613,8 @@ $("#kararGonder").onclick = async () => {
   $("#kararGonder").disabled = false;
 };
 
-async function videoBlob(v) {
-  const b = await assetBul(v);
+async function videoBlob(v, ad) {
+  const b = await assetBul(v, ad);
   if (!b || !b.asset) throw new Error("Video dosyası bulunamadı.");
   const r = await fetch(b.asset.url, {headers: {Authorization: "Bearer " + TOKEN, Accept: "application/octet-stream"}});
   if (!r.ok) throw new Error("İndirilemedi (" + r.status + ")");
@@ -630,10 +631,11 @@ async function videoIslem(islem, id, buton) {
       b.className = KARARLAR[id] === b.dataset.islem ? (b.dataset.islem === "onay" ? "sec-onay" : "sec-red") : "");
     kararCubugu(); return;
   }
-  if (islem === "izle" || islem === "indir") {
+  if (islem === "izle" || islem === "indir" || islem === "hataliIzle") {
     const eski = buton.textContent; buton.disabled = true; buton.textContent = "⏳";
     try {
-      const blob = await videoBlob(v); const url = URL.createObjectURL(blob);
+      const blob = await videoBlob(v, islem === "hataliIzle" ? v.kalite_dosya : null); const url = URL.createObjectURL(blob);
+      if (islem === "hataliIzle") { $("#oynat_" + id).innerHTML = `<video src="${url}" controls autoplay playsinline></video>`; buton.disabled = false; buton.textContent = eski; return; }
       if (islem === "izle") $("#oynat_" + id).innerHTML = `<video src="${url}" controls autoplay playsinline></video>`;
       else { const a = document.createElement("a"); a.href = url; a.download = id + ".mp4"; a.click(); }
     } catch (e) {
