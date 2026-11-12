@@ -104,7 +104,7 @@ const VARSAYILAN_AYARLAR = {
   TTS_SES: "tr-TR-AhmetNeural", TTS_HIZ: "+10%", SES_MOTORU: "edge", ELEVENLABS_SES: "75SIZa3vvET95PHhf1yD", KARARTMA: 0.35, VIDEO_KLIP_ONCELIKLI: true,
   ALTYAZI_BOYUT: 96, ALTYAZI_KELIME: 3, HOOK_SURE: 2.8, HOOK_BOYUT: 100,
   GORSEL_CESITLILIK: true, SERI_ETIKETI: true, FON_MUZIGI: true, MUZIK_SESI: 0.16, OTOMATIK_YORUM: true,
-  IZIN_SURESIZ: false, ONERI_KARARLARI: {}, URETIM_DURAKLAT: false, GUNLUK_SURE: 30, AYLIK_BUTCE: 0, BUTCE_DAVRANIS: "ucuz", KONU_NOTU: "", SENARYO_NOTU: "", GORSEL_NOTU: "", CLOUDFLARE_HESAP: "", UYGUNLUK_KONTROLU: "kapali", OZEL_KONULAR: [], YUKLEME_ONCEDEN_SAAT: 30, URETIM_RITMI: "gunluk", TALEP_KONTROLU: true, EK_SAGLAYICILAR: [], GOREV_MODELLERI: {},
+  IZIN_SURESIZ: false, ONERI_KARARLARI: {}, URETIM_DURAKLAT: false, GUNLUK_SURE: 30, AYLIK_BUTCE: 0, BUTCE_DAVRANIS: "ucuz", KONU_NOTU: "", SENARYO_NOTU: "", GORSEL_NOTU: "", CLOUDFLARE_HESAP: "", UYGUNLUK_KONTROLU: "kapali", OZEL_KONULAR: [], YUKLEME_ONCEDEN_SAAT: 30, URETIM_RITMI: "gunluk", TALEP_KONTROLU: true, STIL_TERCIHLERI: {}, EK_SAGLAYICILAR: [], GOREV_MODELLERI: {},
   SES_EK_MODEL: "", SES_EK_SES: "alloy", SES_EK_FIYAT: 15, ELEVENLABS_MODEL: "eleven_multilingual_v2", ELEVENLABS_BITIS: "",
   GORSEL_KAYNAKLARI: ["nasa_wiki", "pexels_video", "pixabay_video", "pexels_foto", "pixabay_foto"],
   OZEL_KAYNAKLAR: true,
@@ -1006,6 +1006,12 @@ async function ayarlar() {
       <div><label>Ekranda kelime <span class="ince" id="aKelimeNot"></span></label><input type="number" id="aKelime" min="1" max="5" value="${esc(a.ALTYAZI_KELIME)}"></div></div>
     <div class="satir"><div><label>Ekran yazısı (açılış) boyutu</label><input type="number" id="hBoyut" min="60" max="150" value="${esc(a.HOOK_BOYUT)}"></div>
       <div><label>Ekran yazısı süresi (sn)</label><input type="number" id="hSure" min="1" max="6" step="0.1" value="${esc(a.HOOK_SURE)}"></div></div>
+    <div id="stilKutu"><label>Farklı stilde hangi seçenekler kullanılsın? <span class="ince">(hepsi işaretliyse karışık; haftalık analiz de önerebilir)</span></label>
+      ${Object.entries(STIL_TURLERI).map(([tur, [ad, sec]]) => {
+        const izinli = (a.STIL_TERCIHLERI || {})[tur] || [];
+        return `<div class="ince" style="margin-top:6px">${ad}</div><div class="satir" style="flex-wrap:wrap;gap:4px 12px">${sec.map(([k, y]) =>
+          `<label style="font-weight:normal;white-space:nowrap;margin:0"><input type="checkbox" data-stil="${tur}" value="${k}" ${!izinli.length || izinli.includes(k) ? "checked" : ""} style="width:auto"> ${y}</label>`).join("")}</div>`;
+      }).join("")}</div>
     <label><input type="checkbox" id="seriEt" ${a.SERI_ETIKETI ? "checked" : ""}> Videonun üstünde seri adı ve bölüm numarası</label>
     <label><input type="checkbox" id="muzik" ${a.FON_MUZIGI ? "checked" : ""}> Fon müziği + efektler</label>
     <label>Müzik seviyesi: <b id="mVal">${Math.round(a.MUZIK_SESI * 100)}%</b></label>
@@ -1222,7 +1228,7 @@ async function ayarlar() {
   const sesCiz = () => { const m = $("#motor").value;
     $("#sesEk").style.display = m === "ek" ? "" : "none"; $("#sesEl").style.display = m === "elevenlabs" ? "" : "none"; };
   $("#motor").onchange = sesCiz; sesCiz();
-  const kelimeCiz = () => { const c = $("#cesit").checked; $("#aKelime").disabled = c;
+  const kelimeCiz = () => { const c = $("#cesit").checked; $("#aKelime").disabled = c; $("#stilKutu").style.opacity = c ? 1 : 0.4;
     $("#aKelimeNot").textContent = c ? "(farklı stil açıkken her videoda 2-3)" : ""; };
   $("#cesit").addEventListener("change", kelimeCiz); kelimeCiz();
   $("#cfHesap").addEventListener("input", () => kaynakCiz());
@@ -1301,6 +1307,10 @@ async function ayarlar() {
       SES_MOTORU: $("#motor").value, ELEVENLABS_SES: $("#elSes").value.trim() || VARSAYILAN_AYARLAR.ELEVENLABS_SES, KARARTMA: +$("#karartma").value / 100,
       ALTYAZI_BOYUT: +$("#aBoyut").value, ALTYAZI_KELIME: +$("#aKelime").value,
       HOOK_BOYUT: +$("#hBoyut").value, HOOK_SURE: +$("#hSure").value,
+      STIL_TERCIHLERI: Object.fromEntries(Object.keys(STIL_TURLERI).map(tur => {
+        const sec = [...document.querySelectorAll(`[data-stil="${tur}"]:checked`)].map(x => x.value);
+        return [tur, sec.length === STIL_TURLERI[tur][1].length ? [] : sec];
+      }).filter(([, v]) => v.length)),
       GORSEL_CESITLILIK: $("#cesit").checked, SERI_ETIKETI: $("#seriEt").checked, FON_MUZIGI: $("#muzik").checked,
       MUZIK_SESI: +$("#muzikSes").value / 100, OTOMATIK_YORUM: $("#yorum").checked,
       ELEVENLABS_BITIS: $("#elBitis").value || "",
@@ -1320,6 +1330,8 @@ async function ayarlar() {
     yeni.HOOK_BOYUT = sinirla(yeni.HOOK_BOYUT, 60, 150, VARSAYILAN_AYARLAR.HOOK_BOYUT);
     yeni.HOOK_SURE = sinirla(yeni.HOOK_SURE, 1, 6, VARSAYILAN_AYARLAR.HOOK_SURE);
     if (!yeni.KATEGORILER.length) return bildir("En az bir kategori olmalı.");
+    if (Object.keys(STIL_TURLERI).some(t => !document.querySelector(`[data-stil="${t}"]:checked`)))
+      return bildir("🎬 Görünüm kartında her stil türünden en az bir seçenek işaretli olmalı.", 5000);
     if (!yeni.GORSEL_KAYNAKLARI.length) return bildir("🖼️ Görüntüler kartında en az bir kaynağı işaretle.");
     if (yeni.CLOUDFLARE_HESAP && !/^[0-9a-zA-Z]{16,64}$/.test(yeni.CLOUDFLARE_HESAP)) return bildir("Cloudflare hesap numarası sadece harf ve rakamdan oluşmalı (32 hane).", 5000);
     if (yeni.GORSEL_KAYNAKLARI.some(k => k.startsWith("ai:cloudflare:")) && !yeni.CLOUDFLARE_HESAP)
@@ -1391,6 +1403,7 @@ async function istatistik() {
       <b>📺 Seri öncelikleri</b>${Object.entries(st.seri_agirliklari || {}).sort((a, b) => b[1] - a[1]).map(([ad, a]) => `
         <div style="margin-top:6px"><div class="satir"><span>${esc(ad)}</span><span style="text-align:right">${a.toFixed(1)}×</span></div>
         <div class="cubuk"><i style="width:${50 * a}%"></i></div></div>`).join("")}
+      ${st.stil_tavsiyesi ? `<p class="alt">🎬 Görsel stil: ${esc(st.stil_tavsiyesi)}</p>` : ""}
       ${st.deneme ? `<p class="alt">🧪 Bu hafta denenecek: ${esc(st.deneme)}</p>` : ""}
       ${(st.gecmis || []).length > 1 ? `<details><summary class="alt">Önceki haftalar</summary><ul class="alt">${(st.gecmis || []).slice(0, -1).reverse().map(h => `<li><b>${esc(h.tarih)}</b>: ${esc(h.ozet)}</li>`).join("")}</ul></details>` : ""}
     </div>` : `<div class="kart"><h3>🧠 Sistemin öğrendikleri</h3><p class="alt">İlk analiz yeterli veri birikince (en az 6 video) Perşembe üretiminde yapılır.</p></div>`;
@@ -1523,10 +1536,20 @@ async function uyariSeridi() {
   } catch (e) {}
 }
 // 💡 Haftalık analizin ayar önerileri (strateji.json → oneriler). Kararlar ayarlar.json ONERI_KARARLARI'nda.
-const ONERI_ADLARI = {KONU_NOTU: "📝 Konu talimatı", SENARYO_NOTU: "✍️ Senaryo talimatı", GORSEL_NOTU: "🎨 Görsel talimatı",
+// ayarlar.py STIL_SECENEKLERI ile aynı adlar
+const STIL_TURLERI = {
+  vurgu: ["🎨 Vurgu rengi (o an söylenen kelime)", [["sari", "Sarı"], ["camgobegi", "Camgöbeği"], ["yesil", "Yeşil"], ["turuncu", "Turuncu"], ["pembe", "Pembe"]]],
+  altyazi: ["📍 Altyazı yeri", [["en_alt", "En alt"], ["alt", "Alt"], ["orta_alt", "Orta-alt"], ["orta", "Orta"]]],
+  gecis: ["🎞️ Sahne geçişi", [["kesme", "Kesme"], ["karartma", "Kararma"], ["flas", "Flaş"]]],
+  zoom: ["🔍 Fotoğraf zoom yönü", [["iceri", "İçeri"], ["disari", "Dışarı"]]],
+};
+const stilAdi = (tur, k) => ((STIL_TURLERI[tur] || [, []])[1].find(x => x[0] === k) || [, k])[1];
+const ONERI_ADLARI = {STIL_TERCIHLERI: "🎬 Görsel stil", KARARTMA: "🌑 Görüntü karartma",KONU_NOTU: "📝 Konu talimatı", SENARYO_NOTU: "✍️ Senaryo talimatı", GORSEL_NOTU: "🎨 Görsel talimatı",
   KATEGORILER: "📚 Konu alanları", OZEL_KONULAR: "🎯 Belirli konular", TREND_GUNLERI: "📰 Güncel haber günleri",
   GUNLUK_SURE: "⏱️ Günlük video süresi", YAYINLANMA_SAATLERI: "🕐 Yayın saatleri", UYGUNLUK_KONTROLU: "🔍 Görüntü uygunluk kontrolü"};
-const oneriDeger = (alan, d) => alan === "TREND_GUNLERI" ? (d.length ? d.map(i => GUN_ADLARI[i]).join(", ") : "hiç") :
+const oneriDeger = (alan, d) => alan === "STIL_TERCIHLERI" ? (d && d.tur ? `${STIL_TURLERI[d.tur][0]}: sadece ${d.secenekler.map(k => stilAdi(d.tur, k)).join(", ")}`
+    : Object.entries(d || {}).filter(([, v]) => (v || []).length).map(([t, v]) => `${STIL_TURLERI[t][0]}: ${v.map(k => stilAdi(t, k)).join(", ")}`).join(" · ") || "hepsi karışık") :
+  alan === "KARARTMA" ? `%${Math.round(+d * 100)}` : alan === "TREND_GUNLERI" ? (d.length ? d.map(i => GUN_ADLARI[i]).join(", ") : "hiç") :
   alan === "GUNLUK_SURE" ? (d >= 60 ? (d / 60 + " dk").replace(".", ",") : d + " sn") : Array.isArray(d) ? d.join(", ") : String(d);
 function oneriUygula(ayar, o) {
   const liste = ["KATEGORILER", "OZEL_KONULAR"].includes(o.alan);
@@ -1546,12 +1569,18 @@ function oneriUygula(ayar, o) {
       if (!metin.includes(o.eski)) throw new Error("Bu cümle artık talimatında yok (sen değiştirmişsin); öneri uygulanamadı.");
       ayar[o.alan] = metin.replace(o.eski, yeni || "").replace(/[ \t]{2,}/g, " ").replace(/[ \t]+\n/g, "\n").replace(/\n{2,}/g, "\n").replace(/^\s+|\s+$/g, "");
     }
+  } else if (o.alan === "STIL_TERCIHLERI") {
+    ayar.STIL_TERCIHLERI = {...(ayar.STIL_TERCIHLERI || {}), [o.deger.tur]: o.deger.secenekler};
   } else ayar[o.alan] = o.deger;
 }
 function oneriYazi(o, ayar) {
   if (o.islem === "ekle") return `➕ “${esc(o.deger)}” eklensin`;
   if (o.islem === "cikar") return `➖ “${esc(o.eski)}” çıkarılsın`;
   if (o.islem === "degistir") return `🔄 “${esc(o.eski)}” yerine → “${esc(o.deger)}” olsun`;
+  if (o.alan === "STIL_TERCIHLERI") {
+    const simdi = ((ayar.STIL_TERCIHLERI || {})[o.deger.tur] || []);
+    return `→ <b>${esc(oneriDeger(o.alan, o.deger))}</b> <span class="ince">(şu an: ${simdi.length ? esc(simdi.map(k => stilAdi(o.deger.tur, k)).join(", ")) : "hepsi karışık"})</span>`;
+  }
   return `→ <b>${esc(oneriDeger(o.alan, o.deger))}</b> olsun <span class="ince">(şu an: ${esc(oneriDeger(o.alan, ayar[o.alan] ?? VARSAYILAN_AYARLAR[o.alan] ?? ""))})</span>`;
 }
 async function oneriSeridi() {
