@@ -104,7 +104,7 @@ const VARSAYILAN_AYARLAR = {
   TTS_SES: "tr-TR-AhmetNeural", TTS_HIZ: "+10%", SES_MOTORU: "edge", ELEVENLABS_SES: "75SIZa3vvET95PHhf1yD", KARARTMA: 0.35, VIDEO_KLIP_ONCELIKLI: true,
   ALTYAZI_BOYUT: 96, ALTYAZI_KELIME: 3, HOOK_SURE: 2.8, HOOK_BOYUT: 100,
   GORSEL_CESITLILIK: true, SERI_ETIKETI: true, FON_MUZIGI: true, MUZIK_SESI: 0.16, OTOMATIK_YORUM: true,
-  IZIN_SURESIZ: false, ONERI_KARARLARI: {}, URETIM_DURAKLAT: false, GUNLUK_SURE: 30, AYLIK_BUTCE: 0, BUTCE_DAVRANIS: "ucuz", KONU_NOTU: "", SENARYO_NOTU: "", GORSEL_NOTU: "", CLOUDFLARE_HESAP: "", UYGUNLUK_KONTROLU: "kapali", OZEL_KONULAR: [], YUKLEME_ONCEDEN_SAAT: 30, URETIM_RITMI: "gunluk", TALEP_KONTROLU: true, STIL_TERCIHLERI: {}, EK_SAGLAYICILAR: [], GOREV_MODELLERI: {},
+  IZIN_SURESIZ: false, ONERI_KARARLARI: {}, URETIM_DURAKLAT: false, GUNLUK_SURE: 30, AYLIK_BUTCE: 0, BUTCE_DAVRANIS: "ucuz", KONU_NOTU: "", SENARYO_NOTU: "", GORSEL_NOTU: "", CLOUDFLARE_HESAP: "", UYGUNLUK_KONTROLU: "kapali", OZEL_KONULAR: [], YUKLEME_ONCEDEN_SAAT: 30, URETIM_RITMI: "gunluk", TALEP_KONTROLU: true, STIL_TERCIHLERI: {}, ANIMASYON_STILI: "Clean stylized 3D render like a modern educational explainer animation, cutaway cross-section view showing how it works inside, soft studio lighting, dark navy blue background, warm orange accent highlights, smooth matte materials, high detail, subject centered", EK_SAGLAYICILAR: [], GOREV_MODELLERI: {},
   SES_EK_MODEL: "", SES_EK_SES: "alloy", SES_EK_FIYAT: 15, ELEVENLABS_MODEL: "eleven_multilingual_v2", ELEVENLABS_BITIS: "",
   GORSEL_KAYNAKLARI: ["nasa_wiki", "pexels_video", "pixabay_video", "pexels_foto", "pixabay_foto"],
   OZEL_KAYNAKLAR: true,
@@ -436,7 +436,7 @@ function siradakiAlan() {
       dugme = `<button data-konu-degis="" data-zaman="${z.toISOString()}">✏️ Konuyu ben belirleyeyim</button>`;
     } else {
       const bk = bekleyenKonu(v.id);
-      konu = `<b>${esc(v.baslik || v.konu)}</b>${v.baslik && v.baslik !== v.konu ? `<div class="ince">Konu: ${esc(v.konu)}</div>` : ""}`
+      konu = `<b>${v.gorunum === "animasyon" ? "🎬 " : ""}${esc(v.baslik || v.konu)}</b>${v.baslik && v.baslik !== v.konu ? `<div class="ince">Konu: ${esc(v.konu)}</div>` : ""}`
         + (bk ? `<div class="ince">⏳ yeni konu işleniyor: ${esc(bk.duzenle.find(d => d.id === v.id).konu)}</div>` : "");
       if (v.durum === "bekliyor") {
         const t = gunluk ? ilkCalisma(z, URETIM_PENCERE) : null;
@@ -474,6 +474,7 @@ function konuModal(id, zamanIso) {
     <label>Yeni konu (ne anlatsın? ne kadar ayrıntı verirsen o kadar iyi)</label>
     <textarea id="kKonu" style="min-height:80px">${v ? esc(v.konu) : ""}</textarea>
     ${v ? "" : `<label>Video süresi</label><select id="kSure">${sureSecenek(vAyar("GUNLUK_SURE") || 30)}</select>`}
+    ${gorunumSecim("kGorunum", v && v.gorunum)}
     <p class="ince">${yakin && !v ? "Bu yayına az kaldığı için video hemen üretilecek." : "Video yayın günü sabahı bu konuyla üretilir."}</p>
     <div class="butonlar"><button onclick="modalKapat()">Vazgeç</button><button class="ana" id="kGonder">💾 Kaydet</button></div>`);
   $("#kGonder").onclick = async () => {
@@ -484,11 +485,11 @@ function konuModal(id, zamanIso) {
       const zaman = trSaat(z).toISOString().slice(0, 16).replace("T", " ");
       if (v) {
         if (v.durum !== "bekliyor") throw new Error("Bu video üretildi; konusu artık değiştirilemez.");
-        await kuyrugaEkle("onay.json", {duzenle: [{id: v.id, konu}]}, `konu değiştir ${v.id}`);
+        await kuyrugaEkle("onay.json", {duzenle: [{id: v.id, konu, gorunum: $("#kGorunum").value}]}, `konu değiştir ${v.id}`);
       } else if (yakin) {
-        await kuyrugaEkle("yeniden.json", {mod: "yeni", konu, yayinlanma: zaman, sure: +$("#kSure").value}, `yeni video: ${konu.slice(0, 40)}`);
+        await kuyrugaEkle("yeniden.json", {mod: "yeni", konu, yayinlanma: zaman, sure: +$("#kSure").value, gorunum: $("#kGorunum").value}, `yeni video: ${konu.slice(0, 40)}`);
       } else {
-        await kuyrugaEkle("onay.json", {planla: [{yayinlanma: zaman, konu, sure: +$("#kSure").value}]}, `konu planla ${zaman}`);
+        await kuyrugaEkle("onay.json", {planla: [{yayinlanma: zaman, konu, sure: +$("#kSure").value, gorunum: $("#kGorunum").value}]}, `konu planla ${zaman}`);
       }
       modalKapat(); bildir("✅ Kaydedildi. Birkaç dakika içinde listede görünür (↻ ile yenile).", 5000); videolar();
     } catch (e) { bildir("❌ " + e.message, 6000); $("#kGonder").disabled = false; }
@@ -618,7 +619,7 @@ function videoKarti(v) {
   const cumleler = (v.cumleler || []).map(c => `<p>${esc(c)}</p>`).join("");
   const duzeltme = (v.dogrulama_duzeltmeleri || []).length;
   return `<div class="kart" id="k_${id}">
-    <div>${zamanYazi(v)} · <span class="alt">${v.tur === "trend" ? "📈 güncel" : v.tur === "ozel" ? "⚡ senin isteğin" : "🌿 evergreen"}${v.seri ? ` · 📺 ${esc(v.seri)}${v.seri_no ? " #" + esc(v.seri_no) : ""}` : ""}${v.hedef_sure ? ` · ⏱️ ${v.hedef_sure >= 60 ? (v.hedef_sure / 60).toString().replace(".", ",") + " dk" : v.hedef_sure + " sn"}` : ""}</span></div>
+    <div>${zamanYazi(v)} · <span class="alt">${v.tur === "trend" ? "📈 güncel" : v.tur === "ozel" ? "⚡ senin isteğin" : "🌿 evergreen"}${v.seri ? ` · 📺 ${esc(v.seri)}${v.seri_no ? " #" + esc(v.seri_no) : ""}` : ""}${v.gorunum === "animasyon" ? " · 🎬 animasyon" : ""}${v.hedef_sure ? ` · ⏱️ ${v.hedef_sure >= 60 ? (v.hedef_sure / 60).toString().replace(".", ",") + " dk" : v.hedef_sure + " sn"}` : ""}</span></div>
     <h3>${esc(v.baslik || v.konu)}</h3>
     <span class="rozet ${durumSinif}">${durumYazi}</span>
     ${v.youtube_guncelle ? `<span class="rozet">⏳ YouTube'a işleniyor</span>` : ""}
@@ -657,6 +658,7 @@ function yeniVideoModal() {
     <textarea id="yKonu" style="min-height:80px" placeholder="ör. Göbeklitepe neden Stonehenge'den 6000 yıl eski ve kim yaptı?"></textarea>
     <label>Video süresi</label>
     <select id="ySure">${sureSecenek(30)}</select>${SURE_NOTU}
+    ${gorunumSecim("yGorunum", "normal")}
     <label>Ne zaman yayınlansın?</label>
     <select id="yZamanTur"><option value="hemen">Hazır olur olmaz hemen</option><option value="saat">Belirli bir saatte</option></select>
     <div id="ySaatKutu" style="display:none"><label>Yayın tarihi ve saati (Türkiye saati)</label>
@@ -676,7 +678,7 @@ function yeniVideoModal() {
     if (konu.length < 5) return bildir("Konuyu biraz daha açık yaz.");
     const istek = {mod: "yeni", konu, sure: +$("#ySure").value, baslik: $("#yBaslik").value.trim(),
                    cumleler: $("#ySenaryo").value.split("\n").map(x => x.trim()).filter(Boolean),
-                   once_izle: $("#yOnceIzle").checked};
+                   once_izle: $("#yOnceIzle").checked, gorunum: $("#yGorunum").value};
     if ($("#yZamanTur").value === "saat") {
       const z = $("#yZaman").value;
       if (!z) return bildir("Saat seç.");
@@ -691,6 +693,11 @@ function yeniVideoModal() {
     catch (e) { bildir("❌ " + e.message, 6000); $("#yGonder").disabled = false; }
   };
 }
+
+// 🎬 Görünüm: video başına "normal" ya da "animasyon" (aynı stilde 3D çizim + 2.5D hareket + bilgi etiketleri)
+const gorunumSecim = (id, secili) => `<label>Görünüm</label><select id="${id}">
+  <option value="normal" ${secili !== "animasyon" ? "selected" : ""}>🎞️ Normal (gerçek video / fotoğraf)</option>
+  <option value="animasyon" ${secili === "animasyon" ? "selected" : ""}>🎬 3D animasyon stili (çizim + hareket + bilgi kutuları)</option></select>`;
 
 // Video süresi seçenekleri (Shorts en fazla 3 dakika). 30 = normal kısa video.
 const SURELER = [[30, "30 sn — kısa (her zamanki)"], [45, "45 sn"], [60, "1 dakika"], [90, "1,5 dakika"],
@@ -707,7 +714,8 @@ function bilgiModal(v) {
     <p class="alt">${zamanYazi(v)}</p>
     ${grup === "zamanli" || grup === "yayinda" ? `<div class="uyari">Bu video YouTube'da; değişiklik birkaç dakika içinde YouTube'a da işlenir.</div>` : ""}
     ${v.durum === "bekliyor" ? `<label>Konu (henüz üretilmedi — üretimde bu konu işlenir)</label><input id="bKonu" value="${esc(v.konu)}">
-      <label>Video süresi</label><select id="bSure">${sureSecenek(v.hedef_sure)}</select>${SURE_NOTU}` : ""}
+      <label>Video süresi</label><select id="bSure">${sureSecenek(v.hedef_sure)}</select>${SURE_NOTU}
+      ${gorunumSecim("bGorunum", v.gorunum)}` : ""}
     ${["bekliyor", "seslendirildi", "video_hazir"].includes(v.durum) ? `<label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="bOnceIzle" style="width:auto" ${v.onay_bekle ? "checked" : ""}>
       👀 Yayınlamadan önce ben izleyeyim (otomatik onaylanmaz)</label>` : ""}
     <label>YouTube başlığı</label><input id="bBaslik" maxlength="95" value="${esc(v.baslik || "")}" placeholder="${v.durum === "bekliyor" ? "Boş bırakırsan Claude yazar" : ""}">
@@ -721,6 +729,7 @@ function bilgiModal(v) {
     const istek = {id: v.id, baslik: $("#bBaslik").value.trim(), aciklama: $("#bAciklama").value.trim()};
     if ($("#bKonu")) istek.konu = $("#bKonu").value.trim();
     if ($("#bSure")) istek.sure = +$("#bSure").value;
+    if ($("#bGorunum") && $("#bGorunum").value !== (v.gorunum || "normal")) istek.gorunum = $("#bGorunum").value;
     if ($("#bOnceIzle") && $("#bOnceIzle").checked !== !!v.onay_bekle) istek.once_izle = $("#bOnceIzle").checked;
     if ($("#bZaman")) {
       const z = $("#bZaman").value.replace("T", " ").slice(0, 16);
@@ -994,6 +1003,8 @@ async function ayarlar() {
     <label>🎨 Görsel talimatın (isteğe bağlı)</label>
     <p class="ince">Görseller nasıl olsun? Yapay zekâ bu tarife uyar; gerçek görüntü aranırken de arama kelimeleri buna göre seçilir.</p>
     <textarea id="gorselNotu" placeholder="ör. Gerçekçi belgesel fotoğrafı, koyu ve gizemli, sinematik ışık; insan yüzü gösterme, çizgi film olmasın">${esc(a.GORSEL_NOTU || "")}</textarea>
+    <label>🎬 Animasyon çizim stili <span class="ince">(sadece "3D animasyon stili" seçtiğin videolarda; İngilizce yazınca daha iyi anlar)</span></label>
+    <textarea id="animStil" style="min-height:70px">${esc(a.ANIMASYON_STILI || "")}</textarea>
     <label>🌓 Karartma: <b id="kVal">${Math.round(a.KARARTMA * 100)}%</b></label>
     <input type="range" id="karartma" min="0" max="60" value="${Math.round(a.KARARTMA * 100)}">
     <p class="ince">Arka plan ne kadar karartılsın: koyu görüntü gizemli hava verir ve beyaz altyazıyı okunur kılar.
@@ -1299,7 +1310,7 @@ async function ayarlar() {
       GUNLUK_YUKLEME_LIMITI: Math.min(6, Math.max(1, +$("#limit").value || 6)),
       YUKLEME_ONCEDEN_SAAT: +$("#onceden").value, URETIM_RITMI: $("#ritim").value,
       KATEGORILER: $("#kategoriler").value.split("\n").map(x => x.trim()).filter(Boolean),
-      KONU_NOTU: $("#konuNotu").value.trim(), TALEP_KONTROLU: $("#talep").checked, SENARYO_NOTU: $("#senaryoNotu").value.trim(), GORSEL_NOTU: $("#gorselNotu").value.trim(), CLOUDFLARE_HESAP: $("#cfHesap").value.trim(), UYGUNLUK_KONTROLU: $("#uygunluk").value,
+      KONU_NOTU: $("#konuNotu").value.trim(), TALEP_KONTROLU: $("#talep").checked, SENARYO_NOTU: $("#senaryoNotu").value.trim(), GORSEL_NOTU: $("#gorselNotu").value.trim(), ANIMASYON_STILI: $("#animStil").value.trim() || VARSAYILAN_AYARLAR.ANIMASYON_STILI, CLOUDFLARE_HESAP: $("#cfHesap").value.trim(), UYGUNLUK_KONTROLU: $("#uygunluk").value,
       OZEL_KONULAR: $("#ozelKonular").value.split("\n").map(x => x.trim()).filter(Boolean),
       MALIYET_PROFILI: $("#profil").value, BILGI_DOGRULAMA: ($("[data-gorev='dogrulama']") || {}).value !== "kapali", OTOMATIK_ONAY: $("#onayModu").value !== "elle",
       ONAY_MODU: $("#onayModu").value,
@@ -1544,7 +1555,7 @@ const STIL_TURLERI = {
   zoom: ["🔍 Fotoğraf zoom yönü", [["iceri", "İçeri"], ["disari", "Dışarı"]]],
 };
 const stilAdi = (tur, k) => ((STIL_TURLERI[tur] || [, []])[1].find(x => x[0] === k) || [, k])[1];
-const ONERI_ADLARI = {STIL_TERCIHLERI: "🎬 Görsel stil", KARARTMA: "🌑 Görüntü karartma",KONU_NOTU: "📝 Konu talimatı", SENARYO_NOTU: "✍️ Senaryo talimatı", GORSEL_NOTU: "🎨 Görsel talimatı",
+const ONERI_ADLARI = {STIL_TERCIHLERI: "🎬 Görsel stil", KARARTMA: "🌑 Görüntü karartma",KONU_NOTU: "📝 Konu talimatı", SENARYO_NOTU: "✍️ Senaryo talimatı", GORSEL_NOTU: "🎨 Görsel talimatı", ANIMASYON_STILI: "🎬 Animasyon çizim stili",
   KATEGORILER: "📚 Konu alanları", OZEL_KONULAR: "🎯 Belirli konular", TREND_GUNLERI: "📰 Güncel haber günleri",
   GUNLUK_SURE: "⏱️ Günlük video süresi", YAYINLANMA_SAATLERI: "🕐 Yayın saatleri", UYGUNLUK_KONTROLU: "🔍 Görüntü uygunluk kontrolü"};
 const oneriDeger = (alan, d) => alan === "STIL_TERCIHLERI" ? (d && d.tur ? `${STIL_TURLERI[d.tur][0]}: sadece ${d.secenekler.map(k => stilAdi(d.tur, k)).join(", ")}`
