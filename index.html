@@ -1281,7 +1281,7 @@ async function istatistik() {
     const enCok = Math.max(1, ...perf.videolar.map(v => v.izlenme));
     html += `<div class="kart"><h3>📊 Kanal performansı</h3><p class="ince">Son güncelleme: ${esc(perf.tarih)} · ${perf.videolar.length} video</p>
       ${perf.videolar.map(v => `<div style="margin-top:10px">
-        <div class="satir"><span style="flex:3">${esc(v.baslik)}</span><span style="text-align:right">${esc(v.izlenme)} 👁 ${esc(v.begeni)} 👍${v.izlenme_yuzdesi != null ? ` · %${esc(v.izlenme_yuzdesi)}` : ""}</span></div>
+        <div class="satir"><span style="flex:3">${esc(v.baslik)}</span><span style="text-align:right">${esc(v.izlenme)} 👁 ${esc(v.begeni)} 👍${v.izlenme_yuzdesi != null ? ` · %${esc(v.izlenme_yuzdesi)}` : ""}${v.abone_kazanci ? ` · +${esc(v.abone_kazanci)} abone` : ""}${v.paylasim ? ` · ${esc(v.paylasim)} paylaşım` : ""}${v.gosterim ? ` · ${esc(Number(v.gosterim).toLocaleString("tr-TR"))} gösterim` : ""}</span></div>
         <div class="cubuk"><i style="width:${100 * v.izlenme / enCok}%"></i></div></div>`).join("")}</div>`;
   } else html += `<div class="kart"><h3>📊 Kanal performansı</h3><p class="alt">Veri her Perşembe üretimde toplanır.</p></div>`;
   $("#ana").innerHTML = html;
@@ -1412,10 +1412,30 @@ const ONERI_ADLARI = {KONU_NOTU: "📝 Konu talimatı", SENARYO_NOTU: "✍️ Se
 const oneriDeger = (alan, d) => alan === "TREND_GUNLERI" ? (d.length ? d.map(i => GUN_ADLARI[i]).join(", ") : "hiç") :
   alan === "GUNLUK_SURE" ? (d >= 60 ? (d / 60 + " dk").replace(".", ",") : d + " sn") : Array.isArray(d) ? d.join(", ") : String(d);
 function oneriUygula(ayar, o) {
+  const liste = ["KATEGORILER", "OZEL_KONULAR"].includes(o.alan);
   if (o.islem === "ekle") {
-    if (["KATEGORILER", "OZEL_KONULAR"].includes(o.alan)) ayar[o.alan] = [...(ayar[o.alan] || VARSAYILAN_AYARLAR[o.alan] || []), o.deger];
+    if (liste) ayar[o.alan] = [...(ayar[o.alan] || VARSAYILAN_AYARLAR[o.alan] || []), o.deger];
     else ayar[o.alan] = [String(ayar[o.alan] || "").trim(), o.deger].filter(Boolean).join("\n");
+  } else if (o.islem === "cikar" || o.islem === "degistir") {
+    const yeni = o.islem === "degistir" ? o.deger : null;
+    if (liste) {
+      const eski = [...(ayar[o.alan] || VARSAYILAN_AYARLAR[o.alan] || [])];
+      const i = eski.findIndex(m => String(m).trim().toLowerCase() === String(o.eski).trim().toLowerCase());
+      if (i < 0) throw new Error("Bu madde artık ayarlarında yok (sen değiştirmişsin); öneri uygulanamadı.");
+      if (yeni) eski[i] = yeni; else eski.splice(i, 1);
+      ayar[o.alan] = eski;
+    } else {
+      const metin = String(ayar[o.alan] ?? VARSAYILAN_AYARLAR[o.alan] ?? "");
+      if (!metin.includes(o.eski)) throw new Error("Bu cümle artık talimatında yok (sen değiştirmişsin); öneri uygulanamadı.");
+      ayar[o.alan] = metin.replace(o.eski, yeni || "").replace(/[ \t]{2,}/g, " ").replace(/[ \t]+\n/g, "\n").replace(/\n{2,}/g, "\n").replace(/^\s+|\s+$/g, "");
+    }
   } else ayar[o.alan] = o.deger;
+}
+function oneriYazi(o, ayar) {
+  if (o.islem === "ekle") return `➕ “${esc(o.deger)}” eklensin`;
+  if (o.islem === "cikar") return `➖ “${esc(o.eski)}” çıkarılsın`;
+  if (o.islem === "degistir") return `🔄 “${esc(o.eski)}” yerine → “${esc(o.deger)}” olsun`;
+  return `→ <b>${esc(oneriDeger(o.alan, o.deger))}</b> olsun <span class="ince">(şu an: ${esc(oneriDeger(o.alan, ayar[o.alan] ?? VARSAYILAN_AYARLAR[o.alan] ?? ""))})</span>`;
 }
 async function oneriSeridi() {
   try {
@@ -1426,9 +1446,8 @@ async function oneriSeridi() {
     $("#oneriSerit").innerHTML = `<div class="kart" style="margin-top:8px;border-color:var(--mavi)">
       <b>💡 Sistemin önerileri</b> <span class="ince">· ${esc(st.tarih)} haftalık analizinden · onaylamadan hiçbir ayar değişmez</span>
       ${bekleyen.map(o => {
-        const mevcut = o.islem === "ayarla" ? ` <span class="ince">(şu an: ${esc(oneriDeger(o.alan, ayar[o.alan] ?? VARSAYILAN_AYARLAR[o.alan] ?? ""))})</span>` : "";
         return `<div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--cizgi)">
-          <div><b>${esc(ONERI_ADLARI[o.alan] || o.alan)}</b>: ${o.islem === "ekle" ? `➕ “${esc(o.deger)}” eklensin` : `→ <b>${esc(oneriDeger(o.alan, o.deger))}</b> olsun${mevcut}`}</div>
+          <div><b>${esc(ONERI_ADLARI[o.alan] || o.alan)}</b>: ${oneriYazi(o, ayar)}</div>
           ${o.neden ? `<div class="ince">Neden: ${esc(o.neden)}</div>` : ""}
           <div class="satir" style="margin-top:6px"><button class="ana" data-oneri="${esc(o.id)}" data-karar="uygulandi">✅ Uygula</button>
             <button data-oneri="${esc(o.id)}" data-karar="gecildi">✖ Geç</button></div></div>`;
