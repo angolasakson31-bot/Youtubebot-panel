@@ -104,7 +104,7 @@ const VARSAYILAN_AYARLAR = {
   TTS_SES: "tr-TR-AhmetNeural", TTS_HIZ: "+10%", SES_MOTORU: "edge", ELEVENLABS_SES: "75SIZa3vvET95PHhf1yD", KARARTMA: 0.35, VIDEO_KLIP_ONCELIKLI: true,
   ALTYAZI_BOYUT: 96, ALTYAZI_KELIME: 3, HOOK_SURE: 2.8, HOOK_BOYUT: 100,
   GORSEL_CESITLILIK: true, SERI_ETIKETI: true, FON_MUZIGI: true, MUZIK_SESI: 0.16, OTOMATIK_YORUM: true,
-  IZIN_SURESIZ: false, ONERI_KARARLARI: {}, URETIM_DURAKLAT: false, GUNLUK_SURE: 30, AYLIK_BUTCE: 0, BUTCE_DAVRANIS: "ucuz", KONU_NOTU: "", SENARYO_NOTU: "", GORSEL_NOTU: "", CLOUDFLARE_HESAP: "", UYGUNLUK_KONTROLU: "kapali", OZEL_KONULAR: [], YUKLEME_ONCEDEN_SAAT: 30, URETIM_RITMI: "gunluk", TALEP_KONTROLU: true, STIL_TERCIHLERI: {}, ANIMASYON_STILI: "Modern bilim anlatım animasyonu gibi temiz, stilize 3D görüntü; içini gösteren kesit görünüm; yumuşak stüdyo ışığı; koyu lacivert arka plan; sıcak turuncu vurgular; mat ve pürüzsüz yüzeyler; yüksek detay; konu ortada", ANIMASYON_VARSAYILAN: false, EK_SAGLAYICILAR: [], GOREV_MODELLERI: {},
+  IZIN_SURESIZ: false, ONERI_KARARLARI: {}, URETIM_DURAKLAT: false, GUNLUK_SURE: 30, AYLIK_BUTCE: 0, BUTCE_DAVRANIS: "ucuz", KONU_NOTU: "", SENARYO_NOTU: "", GORSEL_NOTU: "", CLOUDFLARE_HESAP: "", UYGUNLUK_KONTROLU: "kapali", OZEL_KONULAR: [], YUKLEME_ONCEDEN_SAAT: 30, URETIM_RITMI: "gunluk", TALEP_KONTROLU: true, STIL_TERCIHLERI: {}, ANIMASYON_STILI: "Modern bilim anlatım animasyonu gibi temiz, stilize 3D görüntü; içini gösteren kesit görünüm; yumuşak stüdyo ışığı; koyu lacivert arka plan; sıcak turuncu vurgular; mat ve pürüzsüz yüzeyler; yüksek detay; konu ortada", ANIMASYON_VARSAYILAN: false, ANIMASYON_BILGI_ETIKETI: true, EK_SAGLAYICILAR: [], GOREV_MODELLERI: {},
   SES_EK_MODEL: "", SES_EK_SES: "alloy", SES_EK_FIYAT: 15, ELEVENLABS_MODEL: "eleven_multilingual_v2", ELEVENLABS_BITIS: "",
   GORSEL_KAYNAKLARI: ["nasa_wiki", "pexels_video", "pixabay_video", "pexels_foto", "pixabay_foto"],
   OZEL_KAYNAKLAR: true,
@@ -691,6 +691,11 @@ function yeniVideoModal() {
     <label>Video süresi</label>
     <select id="ySure">${sureSecenek(30)}</select>${SURE_NOTU}
     ${gorunumSecim("yGorunum", "")}
+    <label>📺 Seri</label>
+    <select id="ySeri"><option value="">Otomatik (yapay zekâ konuya göre seçer)</option>
+      ${SERI_ADLARI.map(s => `<option>${esc(s)}</option>`).join("")}</select>
+    <label>📝 Bu videoya özel talimat <span class="ince">(isteğe bağlı)</span></label>
+    <textarea id="yNot" style="min-height:60px" placeholder="ör. İbret hikâyesi gibi anlat, sonunda izleyiciye ders çıkar · Çocuğa anlatır gibi"></textarea>
     <label>Ne zaman yayınlansın?</label>
     <select id="yZamanTur"><option value="hemen">Hazır olur olmaz hemen</option><option value="saat">Belirli bir saatte</option></select>
     <div id="ySaatKutu" style="display:none"><label>Yayın tarihi ve saati (Türkiye saati)</label>
@@ -710,7 +715,8 @@ function yeniVideoModal() {
     if (konu.length < 5) return bildir("Konuyu biraz daha açık yaz.");
     const istek = {mod: "yeni", konu, sure: +$("#ySure").value, baslik: $("#yBaslik").value.trim(),
                    cumleler: $("#ySenaryo").value.split("\n").map(x => x.trim()).filter(Boolean),
-                   once_izle: $("#yOnceIzle").checked, gorunum: gorunumDeger("yGorunum")};
+                   once_izle: $("#yOnceIzle").checked, gorunum: gorunumDeger("yGorunum"),
+                   seri_secim: $("#ySeri").value, video_notu: $("#yNot").value.trim()};
     if ($("#yZamanTur").value === "saat") {
       const z = $("#yZaman").value;
       if (!z) return bildir("Saat seç.");
@@ -1041,6 +1047,7 @@ async function ayarlar() {
     <p class="ince">Görseller nasıl olsun? Yapay zekâ bu tarife uyar; gerçek görüntü aranırken de arama kelimeleri buna göre seçilir. Türkçe yaz; çizim modeline giderken otomatik İngilizceye çevrilir.</p>
     <textarea id="gorselNotu" placeholder="ör. Gerçekçi belgesel fotoğrafı, koyu ve gizemli, sinematik ışık; insan yüzü gösterme, çizgi film olmasın">${esc(a.GORSEL_NOTU || "")}</textarea>
     <label><input type="checkbox" id="animVarsayilan" ${a.ANIMASYON_VARSAYILAN ? "checked" : ""}> 🎬 Otomatik (günlük) videolar da 3D animasyon stilinde olsun</label>
+    <label><input type="checkbox" id="animEtiket" ${a.ANIMASYON_BILGI_ETIKETI !== false ? "checked" : ""}> 🏷️ Animasyonda sahne başına bilgi kutusu göster ("~2000 VOLT" gibi; hikâyelerde kapatabilirsin)</label>
     <p class="ince">Kapalıyken sadece ⚡ / ✏️ pencerelerinde "🎬 3D animasyon stili" kutusunu işaretlediğin videolar animasyon olur. Her pencerede video başına açıp kapatabilirsin.</p>
     <label>🎬 Animasyon çizim stili</label>
     <p class="ince">Türkçe yaz; çizim modeline gönderilirken sistem otomatik İngilizceye çevirir.</p>
@@ -1350,7 +1357,7 @@ async function ayarlar() {
       GUNLUK_YUKLEME_LIMITI: Math.min(6, Math.max(1, +$("#limit").value || 6)),
       YUKLEME_ONCEDEN_SAAT: +$("#onceden").value, URETIM_RITMI: $("#ritim").value,
       KATEGORILER: $("#kategoriler").value.split("\n").map(x => x.trim()).filter(Boolean),
-      KONU_NOTU: $("#konuNotu").value.trim(), TALEP_KONTROLU: $("#talep").checked, SENARYO_NOTU: $("#senaryoNotu").value.trim(), GORSEL_NOTU: $("#gorselNotu").value.trim(), ANIMASYON_STILI: $("#animStil").value.trim() || VARSAYILAN_AYARLAR.ANIMASYON_STILI, ANIMASYON_VARSAYILAN: $("#animVarsayilan").checked, CLOUDFLARE_HESAP: $("#cfHesap").value.trim(), UYGUNLUK_KONTROLU: $("#uygunluk").value,
+      KONU_NOTU: $("#konuNotu").value.trim(), TALEP_KONTROLU: $("#talep").checked, SENARYO_NOTU: $("#senaryoNotu").value.trim(), GORSEL_NOTU: $("#gorselNotu").value.trim(), ANIMASYON_STILI: $("#animStil").value.trim() || VARSAYILAN_AYARLAR.ANIMASYON_STILI, ANIMASYON_VARSAYILAN: $("#animVarsayilan").checked, ANIMASYON_BILGI_ETIKETI: $("#animEtiket").checked, CLOUDFLARE_HESAP: $("#cfHesap").value.trim(), UYGUNLUK_KONTROLU: $("#uygunluk").value,
       OZEL_KONULAR: $("#ozelKonular").value.split("\n").map(x => x.trim()).filter(Boolean),
       MALIYET_PROFILI: $("#profil").value, BILGI_DOGRULAMA: ($("[data-gorev='dogrulama']") || {}).value !== "kapali", OTOMATIK_ONAY: $("#onayModu").value !== "elle",
       ONAY_MODU: $("#onayModu").value,
