@@ -433,7 +433,7 @@ function siradakiAlan() {
       konu = plan ? `<i>⏳ senin konun eklenecek: ${esc(plan.planla[0].konu)}</i>` : `<span class="alt">Konu henüz seçilmedi — ${secim ? zamanKisa(secim) : "sıradaki çalışmada"} sistem seçecek</span>`;
       uretim = `${zamanKisa(ilkCalisma(z, URETIM_PENCERE) || z)}`;
       yukleme = "üretimden hemen sonra";
-      dugme = `<button data-konu-degis="" data-zaman="${z.toISOString()}">✏️ Konuyu ben belirleyeyim</button>`;
+      dugme = `<button data-konu-degis="" data-zaman="${z.toISOString()}">✏️ Bu saate video planla</button>`;
     } else {
       const bk = bekleyenKonu(v.id);
       konu = `<b>${v.gorunum === "animasyon" ? "🎬 " : ""}${esc(v.baslik || v.konu)}</b>${v.baslik && v.baslik !== v.konu ? `<div class="ince">Konu: ${esc(v.konu)}</div>` : ""}`
@@ -441,7 +441,7 @@ function siradakiAlan() {
       if (v.durum === "bekliyor") {
         const t = gunluk ? ilkCalisma(z, URETIM_PENCERE) : null;
         uretim = v.hemen ? "hemen" : gunluk ? (t ? zamanKisa(t) : "sıradaki çalışmada") : "Perşembe üretiminde";
-        dugme = `<button data-konu-degis="${esc(v.id)}">✏️ Konuyu değiştir</button>`;
+        dugme = `<button data-konu-degis="${esc(v.id)}">✏️ Konu ve ayarları değiştir</button>`;
       } else uretim = (v.kalite_hatasi || []).length ? "🚫 kalite hatası — yeniden denenecek" : "✅ üretildi";
       if (v.durum === "yuklendi") yukleme = "✅ YouTube'da (gizli, zamanlı)";
       else if (v.onay_bekle) yukleme = "👀 sen onaylayınca";
@@ -465,31 +465,63 @@ function siradakiAlan() {
     ${gunluk ? "" : `<p class="ince">Haftalık ritimde boş saatler Perşembe üretiminde doldurulur.</p>`}
     <p class="ince">Saatler yaklaşıktır: GitHub zamanlanmış işleri bazen gecikmeli başlatır.</p></div>`;
 }
+// ayarlar.py SERILER ile aynı adlar
+const SERI_ADLARI = ["Bilim Hâlâ Açıklayamıyor", "Evrenin Sırları", "Bunu Okulda Öğretmediler", "Doğanın Tuhaf Yüzü",
+  "Beynin Gizli Hayatı", "Geleceğin Bilimi"];
+// ✏️ Bir yayın saatinin bütün ayarları: üretilmemiş videoyu düzenler ya da boş saate yeni video planlar
 function konuModal(id, zamanIso) {
   const v = id ? PLAN.find(x => x.id === id) : null;
+  if (v && v.durum !== "bekliyor") return bilgiModal(v);
   const z = v ? yayinZamani(v) : new Date(zamanIso);
-  const yakin = (z - new Date()) / 3600e3 <= URETIM_PENCERE;
-  modalAc(`<h3>✏️ ${v ? "Konuyu değiştir" : "Bu saatin konusunu belirle"}</h3>
-    <p class="alt">📺 ${zamanKisa(z)} yayını${v ? ` · şu anki konu: <b>${esc(v.konu)}</b>` : ""}</p>
-    <label>Yeni konu (ne anlatsın? ne kadar ayrıntı verirsen o kadar iyi)</label>
+  const zamanDegeri = trSaat(z).toISOString().slice(0, 16);
+  const kendi = v && v.dogrulama === "elle yazıldı" ? (v.cumleler || []).join("\n") : "";
+  modalAc(`<h3>✏️ ${v ? "Videoyu düzenle" : "Bu saate video planla"}</h3>
+    <p class="alt">📺 ${zamanKisa(z)} yayını · henüz üretilmedi, hepsini değiştirebilirsin</p>
+    <label>Konu (ne anlatsın? ne kadar ayrıntı verirsen o kadar iyi)</label>
     <textarea id="kKonu" style="min-height:80px">${v ? esc(v.konu) : ""}</textarea>
-    ${v ? "" : `<label>Video süresi</label><select id="kSure">${sureSecenek(vAyar("GUNLUK_SURE") || 30)}</select>`}
+    <div class="satir"><div><label>Video süresi</label><select id="kSure">${sureSecenek(v ? (v.hedef_sure || vAyar("GUNLUK_SURE") || 30) : (vAyar("GUNLUK_SURE") || 30))}</select></div>
+      <div><label>Yayın tarihi ve saati</label><input type="datetime-local" id="kZaman" value="${zamanDegeri}"></div></div>
     ${gorunumSecim("kGorunum", v && v.gorunum)}
-    <p class="ince">${yakin && !v ? "Bu yayına az kaldığı için video hemen üretilecek." : "Video yayın günü sabahı bu konuyla üretilir."}</p>
+    <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="kOnceIzle" style="width:auto" ${v && v.onay_bekle ? "checked" : ""}>
+      👀 Yayınlamadan önce ben izleyeyim <span class="ince">(hazır olunca bekler, ✅ Onayla deyince yayınlanır)</span></label>
+    <label>📺 Seri</label>
+    <select id="kSeri"><option value="">Otomatik (yapay zekâ konuya göre seçer)</option>
+      ${SERI_ADLARI.map(s => `<option ${v && v.seri_secim === s ? "selected" : ""}>${esc(s)}</option>`).join("")}</select>
+    <label>📝 Bu videoya özel talimat <span class="ince">(isteğe bağlı)</span></label>
+    <textarea id="kNot" style="min-height:60px" placeholder="ör. Çocuğa anlatır gibi anlat · Biraz mizahi olsun · Sonunda Türkiye'den bir örnek ver">${esc((v && v.video_notu) || "")}</textarea>
+    <details ${(v && v.baslik) || kendi ? "open" : ""}><summary class="alt">İsteğe bağlı: kendi başlığın / kendi senaryon</summary>
+      <label>YouTube başlığı (boşsa yapay zekâ yazar)</label><input id="kBaslik" maxlength="95" value="${esc((v && v.baslik) || "")}">
+      <label>Kendi senaryon (her satır bir cümle = bir sahne; boşsa yapay zekâ yazar)</label>
+      <textarea id="kSenaryo" style="min-height:110px">${esc(kendi)}</textarea></details>
+    <p class="ince" id="kNotBilgi"></p>
     <div class="butonlar"><button onclick="modalKapat()">Vazgeç</button><button class="ana" id="kGonder">💾 Kaydet</button></div>`);
+  const yakinMi = () => { const t = new Date($("#kZaman").value + ":00+03:00"); return (t - new Date()) / 3600e3 <= URETIM_PENCERE; };
+  const bilgiYaz = () => $("#kNotBilgi").textContent = yakinMi() && !v
+    ? "Bu yayına 1 günden az kaldığı için video hemen üretilecek." : "Video yayın günü sabahı bu ayarlarla üretilir.";
+  $("#kZaman").onchange = bilgiYaz; bilgiYaz();
   $("#kGonder").onclick = async () => {
     const konu = $("#kKonu").value.trim();
     if (konu.length < 5) return bildir("Konuyu biraz daha açık yaz.");
+    const zSecilen = $("#kZaman").value;
+    if (!zSecilen) return bildir("Yayın saatini seç.");
+    if (new Date(zSecilen + ":00+03:00") < new Date(Date.now() + 20 * 60e3)) return bildir("En az 20 dk sonrası bir saat seç.", 5000);
+    const zaman = zSecilen.replace("T", " ");
+    if (zaman !== zamanDegeri.replace("T", " ") && PLAN.some(x => x.yayinlanma === zaman && x.durum !== "reddedildi" && (!v || x.id !== v.id)))
+      if (!confirm("Bu saatte zaten bir video var. Yine de bu saate koyayım mı?")) return;
+    const ortak = {konu, sure: +$("#kSure").value, gorunum: gorunumDeger("kGorunum"), once_izle: $("#kOnceIzle").checked,
+                   seri_secim: $("#kSeri").value, video_notu: $("#kNot").value.trim(), baslik: $("#kBaslik").value.trim(),
+                   cumleler: $("#kSenaryo").value.split("\n").map(x => x.trim()).filter(Boolean)};
     $("#kGonder").disabled = true;
     try {
-      const zaman = trSaat(z).toISOString().slice(0, 16).replace("T", " ");
       if (v) {
-        if (v.durum !== "bekliyor") throw new Error("Bu video üretildi; konusu artık değiştirilemez.");
-        await kuyrugaEkle("onay.json", {duzenle: [{id: v.id, konu, gorunum: gorunumDeger("kGorunum")}]}, `konu değiştir ${v.id}`);
-      } else if (yakin) {
-        await kuyrugaEkle("yeniden.json", {mod: "yeni", konu, yayinlanma: zaman, sure: +$("#kSure").value, gorunum: gorunumDeger("kGorunum")}, `yeni video: ${konu.slice(0, 40)}`);
+        if (v.durum !== "bekliyor") throw new Error("Bu video üretildi; artık değiştirilemez.");
+        const istek = {id: v.id, ...ortak};
+        if (zaman !== zamanDegeri.replace("T", " ")) istek.yayinlanma = zaman;
+        await kuyrugaEkle("onay.json", {duzenle: [istek]}, `video düzenle ${v.id}`);
+      } else if (yakinMi()) {
+        await kuyrugaEkle("yeniden.json", {mod: "yeni", ...ortak, yayinlanma: zaman}, `yeni video: ${konu.slice(0, 40)}`);
       } else {
-        await kuyrugaEkle("onay.json", {planla: [{yayinlanma: zaman, konu, sure: +$("#kSure").value, gorunum: gorunumDeger("kGorunum")}]}, `konu planla ${zaman}`);
+        await kuyrugaEkle("onay.json", {planla: [{...ortak, yayinlanma: zaman}]}, `video planla ${zaman}`);
       }
       modalKapat(); bildir("✅ Kaydedildi. Birkaç dakika içinde listede görünür (↻ ile yenile).", 5000); videolar();
     } catch (e) { bildir("❌ " + e.message, 6000); $("#kGonder").disabled = false; }
@@ -823,7 +855,7 @@ async function videoIslem(islem, id, buton) {
     buton.disabled = false; return;
   }
   if (islem === "duzenle") return duzenleModal(v);
-  if (islem === "bilgi") return bilgiModal(v);
+  if (islem === "bilgi") return v.durum === "bekliyor" ? konuModal(v.id) : bilgiModal(v);
   if (islem === "kendi") return kendiVideom(v);
 }
 
