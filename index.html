@@ -104,7 +104,7 @@ const VARSAYILAN_AYARLAR = {
   TTS_SES: "tr-TR-AhmetNeural", TTS_HIZ: "+10%", SES_MOTORU: "edge", ELEVENLABS_SES: "75SIZa3vvET95PHhf1yD", KARARTMA: 0.35, VIDEO_KLIP_ONCELIKLI: true,
   ALTYAZI_BOYUT: 96, ALTYAZI_KELIME: 3, HOOK_SURE: 2.8, HOOK_BOYUT: 100,
   GORSEL_CESITLILIK: true, SERI_ETIKETI: true, FON_MUZIGI: true, MUZIK_SESI: 0.16, OTOMATIK_YORUM: true,
-  IZIN_SURESIZ: false, ONERI_KARARLARI: {}, URETIM_DURAKLAT: false, GUNLUK_SURE: 30, AYLIK_BUTCE: 0, BUTCE_DAVRANIS: "ucuz", KONU_NOTU: "", SENARYO_NOTU: "", GORSEL_NOTU: "", CLOUDFLARE_HESAP: "", UYGUNLUK_KONTROLU: "kapali", OZEL_KONULAR: [], YUKLEME_ONCEDEN_SAAT: 30, URETIM_RITMI: "gunluk", TALEP_KONTROLU: true, STIL_TERCIHLERI: {}, ANIMASYON_STILI: "Modern bilim anlatım animasyonu gibi temiz, stilize 3D görüntü; içini gösteren kesit görünüm; yumuşak stüdyo ışığı; koyu lacivert arka plan; sıcak turuncu vurgular; mat ve pürüzsüz yüzeyler; yüksek detay; konu ortada", ANIMASYON_VARSAYILAN: false, ANIMASYON_BILGI_ETIKETI: true, EK_SAGLAYICILAR: [], GOREV_MODELLERI: {},
+  IZIN_SURESIZ: false, ONERI_KARARLARI: {}, URETIM_DURAKLAT: false, GUNLUK_SURE: 30, AYLIK_BUTCE: 0, BUTCE_DAVRANIS: "ucuz", KONU_NOTU: "", SENARYO_NOTU: "", GORSEL_NOTU: "", CLOUDFLARE_HESAP: "", UYGUNLUK_KONTROLU: "kapali", OZEL_KONULAR: [], YUKLEME_ONCEDEN_SAAT: 30, URETIM_RITMI: "gunluk", TALEP_KONTROLU: true, STIL_TERCIHLERI: {}, ANIMASYON_STILI: "Modern bilim anlatım animasyonu gibi temiz, stilize 3D görüntü; içini gösteren kesit görünüm; yumuşak stüdyo ışığı; koyu lacivert arka plan; sıcak turuncu vurgular; mat ve pürüzsüz yüzeyler; yüksek detay; konu ortada", ANIMASYON_VARSAYILAN: false, KANAL_TURU: "bilim", HIKAYE_STILI: "Bütün resim küçük düzensiz cam taşlarından oluşan mozaik vitray; ince koyu derz çizgileri; düz 2D çizim; sıcak toprak kahvesi, altın ve bej tonlar; sade, iri hatlı karakterler; dikey tek odak; fotoğraf değil; yazı, harf, dini sembol, haç, hale, melek yok", HIKAYE_SURE: 45, ANIMASYON_BILGI_ETIKETI: true, EK_SAGLAYICILAR: [], GOREV_MODELLERI: {},
   SES_EK_MODEL: "", SES_EK_SES: "alloy", SES_EK_FIYAT: 15, ELEVENLABS_MODEL: "eleven_multilingual_v2", ELEVENLABS_BITIS: "",
   GORSEL_KAYNAKLARI: ["nasa_wiki", "pexels_video", "pixabay_video", "pexels_foto", "pixabay_foto"],
   OZEL_KAYNAKLAR: true,
@@ -466,8 +466,15 @@ function siradakiAlan() {
     <p class="ince">Saatler yaklaşıktır: GitHub zamanlanmış işleri bazen gecikmeli başlatır.</p></div>`;
 }
 // ayarlar.py SERILER ile aynı adlar
-const SERI_ADLARI = ["Bilim Hâlâ Açıklayamıyor", "Evrenin Sırları", "Bunu Okulda Öğretmediler", "Doğanın Tuhaf Yüzü",
+const SERI_BILIM = ["Bilim Hâlâ Açıklayamıyor", "Evrenin Sırları", "Bunu Okulda Öğretmediler", "Doğanın Tuhaf Yüzü",
   "Beynin Gizli Hayatı", "Geleceğin Bilimi"];
+// 📖 ayarlar.py HIKAYE_SERILERI ile aynı adlar
+const SERI_HIKAYE = ["Nasreddin Hoca'dan", "Mesnevi'den", "Kelile ve Dimne'den", "Ezop'tan", "Dünyadan Hikâyeler",
+  "Anadolu'dan Hikâyeler"];
+const hikayeKanali = () => vAyar("KANAL_TURU") === "hikaye";
+const SERI_ADLARI_AL = () => hikayeKanali() ? SERI_HIKAYE : SERI_BILIM;
+const KALIP_ADLARI = {celiski: "çelişki → geçmiş → ders", sondan: "sondan başla", iki_kez: "iki karşılaşma",
+  soru: "soru → hikâye → cevap", sinav: "sınav / imtihan", uc_kez: "üç kez tekrar eden hata", ters_kose: "ters köşe"};
 // ✏️ Bir yayın saatinin bütün ayarları: üretilmemiş videoyu düzenler ya da boş saate yeni video planlar
 function konuModal(id, zamanIso) {
   const v = id ? PLAN.find(x => x.id === id) : null;
@@ -486,7 +493,7 @@ function konuModal(id, zamanIso) {
       👀 Yayınlamadan önce ben izleyeyim <span class="ince">(hazır olunca bekler, ✅ Onayla deyince yayınlanır)</span></label>
     <label>📺 Seri</label>
     <select id="kSeri"><option value="">Otomatik (yapay zekâ konuya göre seçer)</option>
-      ${SERI_ADLARI.map(s => `<option ${v && v.seri_secim === s ? "selected" : ""}>${esc(s)}</option>`).join("")}</select>
+      ${SERI_ADLARI_AL().map(s => `<option ${v && v.seri_secim === s ? "selected" : ""}>${esc(s)}</option>`).join("")}</select>
     <label>📝 Bu videoya özel talimat <span class="ince">(isteğe bağlı)</span></label>
     <textarea id="kNot" style="min-height:60px" placeholder="ör. Çocuğa anlatır gibi anlat · Biraz mizahi olsun · Sonunda Türkiye'den bir örnek ver">${esc((v && v.video_notu) || "")}</textarea>
     <details ${(v && v.baslik) || kendi ? "open" : ""}><summary class="alt">İsteğe bağlı: kendi başlığın / kendi senaryon</summary>
@@ -651,7 +658,7 @@ function videoKarti(v) {
   const cumleler = (v.cumleler || []).map(c => `<p>${esc(c)}</p>`).join("");
   const duzeltme = (v.dogrulama_duzeltmeleri || []).length;
   return `<div class="kart" id="k_${id}">
-    <div>${zamanYazi(v)} · <span class="alt">${v.tur === "trend" ? "📈 güncel" : v.tur === "ozel" ? "⚡ senin isteğin" : "🌿 evergreen"}${v.seri ? ` · 📺 ${esc(v.seri)}${v.seri_no ? " #" + esc(v.seri_no) : ""}` : ""}${(v.gorunum || (["bekliyor", "seslendirildi"].includes(v.durum) && vAyar("ANIMASYON_VARSAYILAN") ? "animasyon" : "")) === "animasyon" ? " · 🎬 animasyon" : ""}${v.hedef_sure ? ` · ⏱️ ${v.hedef_sure >= 60 ? (v.hedef_sure / 60).toString().replace(".", ",") + " dk" : v.hedef_sure + " sn"}` : ""}</span></div>
+    <div>${zamanYazi(v)} · <span class="alt">${v.tur === "trend" ? "📈 güncel" : v.tur === "ozel" ? "⚡ senin isteğin" : v.tur === "hikaye" ? `📖 hikâye · ${esc(KALIP_ADLARI[v.kalip] || "")}` : "🌿 evergreen"}${v.seri ? ` · 📺 ${esc(v.seri)}${v.seri_no ? " #" + esc(v.seri_no) : ""}` : ""}${(v.gorunum || (["bekliyor", "seslendirildi"].includes(v.durum) && vAyar("ANIMASYON_VARSAYILAN") ? "animasyon" : "")) === "animasyon" ? " · 🎬 animasyon" : ""}${v.hedef_sure ? ` · ⏱️ ${v.hedef_sure >= 60 ? (v.hedef_sure / 60).toString().replace(".", ",") + " dk" : v.hedef_sure + " sn"}` : ""}</span></div>
     <h3>${esc(v.baslik || v.konu)}</h3>
     <span class="rozet ${durumSinif}">${durumYazi}</span>
     ${v.youtube_guncelle ? `<span class="rozet">⏳ YouTube'a işleniyor</span>` : ""}
@@ -693,7 +700,7 @@ function yeniVideoModal() {
     ${gorunumSecim("yGorunum", "")}
     <label>📺 Seri</label>
     <select id="ySeri"><option value="">Otomatik (yapay zekâ konuya göre seçer)</option>
-      ${SERI_ADLARI.map(s => `<option>${esc(s)}</option>`).join("")}</select>
+      ${SERI_ADLARI_AL().map(s => `<option>${esc(s)}</option>`).join("")}</select>
     <label>📝 Bu videoya özel talimat <span class="ince">(isteğe bağlı)</span></label>
     <textarea id="yNot" style="min-height:60px" placeholder="ör. İbret hikâyesi gibi anlat, sonunda izleyiciye ders çıkar · Çocuğa anlatır gibi"></textarea>
     <label>Ne zaman yayınlansın?</label>
@@ -735,6 +742,7 @@ function yeniVideoModal() {
 // 🎬 Görünüm: video başına "normal" ya da "animasyon" (aynı stilde 3D çizim + 2.5D hareket + bilgi etiketleri)
 // secili: "animasyon" / "normal" / boş (boşsa Ayarlar'daki "otomatik videolar da animasyon" seçimi)
 const gorunumSecim = (id, secili) => {
+  if (hikayeKanali()) return "";            // 📖 hikâye kanalında görünüm hep mozaik vitray
   const acik = secili ? secili === "animasyon" : !!vAyar("ANIMASYON_VARSAYILAN");
   return `<label style="display:flex;gap:8px;align-items:center;margin-top:10px"><input type="checkbox" id="${id}" style="width:auto" ${acik ? "checked" : ""}>
     🎬 3D animasyon stili <span class="ince">(aynı stilde çizim + hareket + bilgi kutuları)</span></label>`;
@@ -991,6 +999,14 @@ async function ayarlar() {
   </div>
 
   <div class="kart" id="a_icerik"><h3>🧠 İçerik: konular ve senaryo</h3>
+    <label>📺 Kanal türü</label>
+    <select id="kanalTuru">${secenek(a.KANAL_TURU || "bilim", [["bilim", "🔬 Bilim / gizem (Birbilgibirinsan)"], ["hikaye", "📖 İbret hikâyeleri (Bir Hikâye Bir Ders)"]])}</select>
+    <p class="ince">📖 Hikâye kanalında: konu yerine telifsiz ibret hikâyesi seçilir, masalcı sesle tek parça anlatılır, sahneler mozaik vitray çizilir; bilgi doğrulama, güncel haber ve talep kontrolü kapanır. Değişiklik bir sonraki üretimde geçerli olur.</p>
+    <div id="hikayeAlan">
+      <label>📖 Hikâye videosu süresi (sn)</label><input type="number" id="hikayeSure" min="35" max="90" value="${esc(a.HIKAYE_SURE || 45)}">
+      <label>🪟 Hikâye çizim stili <span class="ince">(Türkçe yaz; çizime giderken İngilizceye çevrilir)</span></label>
+      <textarea id="hikayeStil" style="min-height:70px">${esc(a.HIKAYE_STILI || "")}</textarea>
+    </div>
     <label>📚 Kanalın konu alanları (her satır bir alan)</label>
     <p class="ince">Kanalın "menüsü": her zaman ilgi çeken (kalıcı) konular bu alanlardan seçilir. Alan eklersen kanal oraya da açılır.</p>
     <textarea id="kategoriler">${esc(a.KATEGORILER.join("\n"))}</textarea>
@@ -1286,6 +1302,8 @@ async function ayarlar() {
   const sesCiz = () => { const m = $("#motor").value;
     $("#sesEk").style.display = m === "ek" ? "" : "none"; $("#sesEl").style.display = m === "elevenlabs" ? "" : "none"; };
   $("#motor").onchange = sesCiz; sesCiz();
+  const turCiz = () => { $("#hikayeAlan").style.display = $("#kanalTuru").value === "hikaye" ? "" : "none"; };
+  $("#kanalTuru").onchange = turCiz; turCiz();
   const kelimeCiz = () => { const c = $("#cesit").checked; $("#aKelime").disabled = c; $("#stilKutu").style.opacity = c ? 1 : 0.4;
     $("#aKelimeNot").textContent = c ? "(farklı stil açıkken her videoda 2-3)" : ""; };
   $("#cesit").addEventListener("change", kelimeCiz); kelimeCiz();
@@ -1357,7 +1375,9 @@ async function ayarlar() {
       GUNLUK_YUKLEME_LIMITI: Math.min(6, Math.max(1, +$("#limit").value || 6)),
       YUKLEME_ONCEDEN_SAAT: +$("#onceden").value, URETIM_RITMI: $("#ritim").value,
       KATEGORILER: $("#kategoriler").value.split("\n").map(x => x.trim()).filter(Boolean),
-      KONU_NOTU: $("#konuNotu").value.trim(), TALEP_KONTROLU: $("#talep").checked, SENARYO_NOTU: $("#senaryoNotu").value.trim(), GORSEL_NOTU: $("#gorselNotu").value.trim(), ANIMASYON_STILI: $("#animStil").value.trim() || VARSAYILAN_AYARLAR.ANIMASYON_STILI, ANIMASYON_VARSAYILAN: $("#animVarsayilan").checked, ANIMASYON_BILGI_ETIKETI: $("#animEtiket").checked, CLOUDFLARE_HESAP: $("#cfHesap").value.trim(), UYGUNLUK_KONTROLU: $("#uygunluk").value,
+      KONU_NOTU: $("#konuNotu").value.trim(), TALEP_KONTROLU: $("#talep").checked, SENARYO_NOTU: $("#senaryoNotu").value.trim(), GORSEL_NOTU: $("#gorselNotu").value.trim(), ANIMASYON_STILI: $("#animStil").value.trim() || VARSAYILAN_AYARLAR.ANIMASYON_STILI, ANIMASYON_VARSAYILAN: $("#animVarsayilan").checked,
+      KANAL_TURU: $("#kanalTuru").value, HIKAYE_STILI: $("#hikayeStil").value.trim() || VARSAYILAN_AYARLAR.HIKAYE_STILI,
+      HIKAYE_SURE: Math.min(90, Math.max(35, +$("#hikayeSure").value || 45)), ANIMASYON_BILGI_ETIKETI: $("#animEtiket").checked, CLOUDFLARE_HESAP: $("#cfHesap").value.trim(), UYGUNLUK_KONTROLU: $("#uygunluk").value,
       OZEL_KONULAR: $("#ozelKonular").value.split("\n").map(x => x.trim()).filter(Boolean),
       MALIYET_PROFILI: $("#profil").value, BILGI_DOGRULAMA: ($("[data-gorev='dogrulama']") || {}).value !== "kapali", OTOMATIK_ONAY: $("#onayModu").value !== "elle",
       ONAY_MODU: $("#onayModu").value,
