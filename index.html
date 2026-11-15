@@ -1499,7 +1499,7 @@ async function ayarlar() {
     if (!d.kurulu) { $("#anahtarlar").innerHTML = `<div class="uyari">Kasa henüz kurulmadı. <b>İşler → 🔑 Anahtar testi</b>'ni bir kez çalıştır (1-2 dk), sonra bu sayfayı yenile.</div>`; return; }
     const saglayiciAdi = no => ((a.EK_SAGLAYICILAR || []).find(x => +x.yuva === no) || {}).ad;
     const satirlar = [["CLAUDE_API_KEY", "Claude (Anthropic)"], ["ELEVENLABS_API_KEY", "ElevenLabs"], ["PEXELS_API_KEY", "Pexels"],
-      ["PIXABAY_API_KEY", "Pixabay"], ["CLOUDFLARE_API_KEY", "Cloudflare (görsel)"], ...[1, 2, 3].map(n => [`EK_API_KEY_${n}`, `Sağlayıcı ${n}${saglayiciAdi(n) ? " · " + saglayiciAdi(n) : ""}`])];
+      ["PIXABAY_API_KEY", "Pixabay"], ["CLOUDFLARE_API_KEY", "Cloudflare (görsel)"], ["GEMINI_API_KEY", "Google Gemini (yedek çizici)"], ...[1, 2, 3].map(n => [`EK_API_KEY_${n}`, `Sağlayıcı ${n}${saglayiciAdi(n) ? " · " + saglayiciAdi(n) : ""}`])];
     $("#anahtarlar").innerHTML = satirlar.map(([ad, etiket]) => {
       const var_ = d.adlar.includes(ad);
       return `<div style="margin:10px 0"><div><b>${esc(etiket)}</b> <span class="rozet ${var_ ? "onay" : ""}">${var_ ? "✅ panelden eklendi" : "GitHub secret'ı (varsa)"}</span></div>
