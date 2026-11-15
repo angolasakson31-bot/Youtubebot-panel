@@ -104,7 +104,7 @@ const VARSAYILAN_AYARLAR = {
   TTS_SES: "tr-TR-AhmetNeural", TTS_HIZ: "+10%", SES_MOTORU: "edge", ELEVENLABS_SES: "75SIZa3vvET95PHhf1yD", KARARTMA: 0.35, VIDEO_KLIP_ONCELIKLI: true,
   ALTYAZI_BOYUT: 96, ALTYAZI_KELIME: 3, HOOK_SURE: 2.8, HOOK_BOYUT: 100,
   GORSEL_CESITLILIK: true, SERI_ETIKETI: true, FON_MUZIGI: true, MUZIK_SESI: 0.16, OTOMATIK_YORUM: true,
-  IZIN_SURESIZ: false, ONERI_KARARLARI: {}, URETIM_DURAKLAT: false, GUNLUK_SURE: 30, AYLIK_BUTCE: 0, BUTCE_DAVRANIS: "ucuz", KONU_NOTU: "", SENARYO_NOTU: "", GORSEL_NOTU: "", CLOUDFLARE_HESAP: "", CLOUDFLARE_HESAP_2: "", CLOUDFLARE_AKTIF: 1, UYGUNLUK_KONTROLU: "kapali", OZEL_KONULAR: [], YUKLEME_ONCEDEN_SAAT: 30, URETIM_RITMI: "gunluk", TALEP_KONTROLU: true, STIL_TERCIHLERI: {}, ANIMASYON_STILI: "Modern bilim anlatım animasyonu gibi temiz, stilize 3D görüntü; içini gösteren kesit görünüm; yumuşak stüdyo ışığı; koyu lacivert arka plan; sıcak turuncu vurgular; mat ve pürüzsüz yüzeyler; yüksek detay; konu ortada", ANIMASYON_VARSAYILAN: false, KANAL_TURU: "bilim", HIKAYE_STILI: "Bütün resim küçük düzensiz cam taşlarından oluşan mozaik vitray; ince koyu derz çizgileri; düz 2D çizim; sıcak toprak kahvesi, altın ve bej tonlar; sade, iri hatlı karakterler; dikey tek odak; fotoğraf değil; yazı, harf, dini sembol, haç, hale, melek yok", HIKAYE_SURE: 45, HIKAYE_SERI_ACIK: [], HIKAYE_OGRENME: "dengeli", HIKAYE_CIZIM_MODELI: "@cf/black-forest-labs/flux-2-klein-4b", HIKAYE_KONTROL_ESIK: 7, HIKAYE_YENIDEN_CIZIM: 2, HIKAYE_YENIDEN_BUTCE: 10, HIKAYE_KALITE_YEDEK: true, HIKAYE_YAYIN_ESIGI: 5, HIKAYE_HAREKET: "normal", HIKAYE_KALIP_ACIK: [], HIKAYE_TON_ACIK: [], HIKAYE_KAPANIS_ACIK: [],
+  IZIN_SURESIZ: false, ONERI_KARARLARI: {}, URETIM_DURAKLAT: false, GUNLUK_SURE: 30, AYLIK_BUTCE: 0, BUTCE_DAVRANIS: "ucuz", KONU_NOTU: "", SENARYO_NOTU: "", GORSEL_NOTU: "", CLOUDFLARE_HESAP: "", CLOUDFLARE_HESAP_2: "", CLOUDFLARE_AKTIF: 1, UYGUNLUK_KONTROLU: "kapali", OZEL_KONULAR: [], YUKLEME_ONCEDEN_SAAT: 30, URETIM_RITMI: "gunluk", TALEP_KONTROLU: true, STIL_TERCIHLERI: {}, ANIMASYON_STILI: "Modern bilim anlatım animasyonu gibi temiz, stilize 3D görüntü; içini gösteren kesit görünüm; yumuşak stüdyo ışığı; koyu lacivert arka plan; sıcak turuncu vurgular; mat ve pürüzsüz yüzeyler; yüksek detay; konu ortada", ANIMASYON_VARSAYILAN: false, KANAL_TURU: "bilim", HIKAYE_STILI: "Bütün resim küçük düzensiz cam taşlarından oluşan mozaik vitray; ince koyu derz çizgileri; düz 2D çizim; sıcak toprak kahvesi, altın ve bej tonlar; sade, iri hatlı karakterler; dikey tek odak; fotoğraf değil; yazı, harf, dini sembol, haç, hale, melek yok", HIKAYE_SURE: 45, HIKAYE_SERI_ACIK: [], HIKAYE_OGRENME: "dengeli", HIKAYE_CIZIM_MODELI: "@cf/black-forest-labs/flux-2-klein-4b", HIKAYE_KONTROL_ESIK: 7, HIKAYE_YENIDEN_CIZIM: 4, HIKAYE_YENIDEN_BUTCE: 20, HIKAYE_ACIL_HAK: 4, HIKAYE_KALITE_HAK: 0, HIKAYE_KALITE_YEDEK: true, HIKAYE_YAYIN_ESIGI: 5, HIKAYE_HAREKET: "normal", HIKAYE_KALIP_ACIK: [], HIKAYE_TON_ACIK: [], HIKAYE_KAPANIS_ACIK: [],
   HIKAYE_KALIPLARI: {celiski: "Çelişkili açılış → geçmişe dönüş → mücadele / vazgeçiş → ders izleyiciye bağlanır",
     sondan: "Sonucu göster → başa dön → hatanın anı → tek cümlelik hikmet",
     iki_kez: "Aynı durumun iki karşılaşması → değişen tek şey → ikinci karşılaşma → ders sahnenin içinden",
@@ -1091,7 +1091,7 @@ async function ayarlar() {
         ["6", "Yayından ~5 saat önce (15:07) — gün içinde izleyip değiştirebilirsin"], ["14", "Sadece yayın günü sabahı (11:07)"], ["0", "Onaylanınca hemen hepsi (YouTube'da gizli sırada bekler)"]])}</select>
       <p class="ince">Video yüklenene kadar bizde bekler: başlığını, saatini, senaryosunu serbestçe değiştirebilirsin.</p>
       <label>Günlük en fazla YouTube yüklemesi (YouTube kotası: en fazla 6)</label>
-      <input type="number" id="limit" min="1" max="6" value="${esc(a.GUNLUK_YUKLEME_LIMITI)}">
+      <input type="number" id="limit" min="1" value="${esc(a.GUNLUK_YUKLEME_LIMITI)}">
     </details>
   </div>
 
@@ -1107,7 +1107,7 @@ async function ayarlar() {
         API anahtarları, Cloudflare hesabı, yapay zekâ seçimleri ve bütçe iki kanalda ortaktır. Değişiklik bir sonraki üretimde geçerli olur.</p>
     </div>
     <div id="hikayeAlan">
-      <label>⏱️ Hikâye videosu süresi (sn)</label><input type="number" id="hikayeSure" min="35" max="90" value="${esc(a.HIKAYE_SURE || 45)}">
+      <label>⏱️ Hikâye videosu süresi (sn)</label><input type="number" id="hikayeSure" min="1" value="${esc(a.HIKAYE_SURE || 45)}">
       <p class="ince">Otomatik hikâyeler bu sürede anlatılır (önerilen 45-50). ⚡ ile istediğin videoda süreyi ayrıca seçersin.</p>
       <label>📺 Hangi serilerden hikâye anlatılsın? <span class="ince">(hepsi işaretliyse hepsinden karışık; haftalık analiz de önerebilir)</span></label>
       <div class="satir" style="flex-wrap:wrap;gap:4px 12px">${SERI_HIKAYE.map(ad => `<label style="font-weight:normal;white-space:nowrap;margin:0"><input type="checkbox" data-hseri="${esc(ad)}" ${!(a.HIKAYE_SERI_ACIK || []).length || a.HIKAYE_SERI_ACIK.includes(ad) ? "checked" : ""} style="width:auto"> ${esc(ad)}</label>`).join("")}</div>
@@ -1182,11 +1182,14 @@ async function ayarlar() {
       <h4 style="margin-top:12px">🔍 Çizim kalite kontrolü</h4>
       <p class="ince">Her çizime ucuz yapay zekâ 1-10 puan verir (doğru hayvan/kişi mi, karakter referansla aynı mı, mozaik vitray mı,
         önceki sahnelerle aynı stil mi, yazı / dini sembol / bozuk anatomi var mı). Eşiğin altındaysa sorunu söyleyerek yeniden çizdirir, en iyi puanlıyı kullanır.</p>
-      <div class="satir"><div><label>Ne kadar sıkı?</label><select id="hEsik">${secenek(String(a.HIKAYE_KONTROL_ESIK ?? 7), [["6", "Normal (6/10)"], ["7", "Sıkı (7/10) · önerilen"], ["8", "Çok sıkı (8/10)"]])}</select></div>
-        <div><label>Sahne başına yeniden çizim</label><select id="hYeniden">${secenek(String(a.HIKAYE_YENIDEN_CIZIM ?? 2), [["0", "Yok"], ["1", "1 kez"], ["2", "2 kez · önerilen"], ["3", "3 kez"]])}</select></div></div>
-      <label>Video başına toplam yeniden çizim hakkı <span class="ince">(kota koruması)</span></label>
-      <input type="number" id="hButce" min="0" max="30" value="${esc(a.HIKAYE_YENIDEN_BUTCE ?? 10)}">
-      <label><input type="checkbox" id="hKaliteYedek" ${a.HIKAYE_KALITE_YEDEK !== false ? "checked" : ""}> Son denemede kaliteli modele (klein 9B) geç</label>
+      <div class="satir"><div><label>Geçme puanı (/10) <span class="ince">önerilen 7</span></label><input type="number" id="hEsik" min="0" value="${esc(a.HIKAYE_KONTROL_ESIK ?? 7)}"></div>
+        <div><label>Sahne başına yeniden çizim <span class="ince">önerilen 4</span></label><input type="number" id="hYeniden" min="0" value="${esc(a.HIKAYE_YENIDEN_CIZIM ?? 4)}"></div></div>
+      <div class="satir"><div><label>Video başına toplam hak <span class="ince">önerilen 20</span></label><input type="number" id="hButce" min="0" value="${esc(a.HIKAYE_YENIDEN_BUTCE ?? 20)}"></div>
+        <div><label>Acil hak (çok zayıf sahneye) <span class="ince">önerilen 4</span></label><input type="number" id="hAcil" min="0" value="${esc(a.HIKAYE_ACIL_HAK ?? 4)}"></div></div>
+      <label>💪 Güçlü modelle (klein 9B) son deneme — video başına kaç kez <span class="ince">önerilen 0</span></label>
+      <input type="number" id="hGuclu" min="0" value="${esc(a.HIKAYE_KALITE_YEDEK === false ? 0 : (a.HIKAYE_KALITE_HAK ?? 0))}">
+      <p class="ince">Sınır yok, istediğin sayıyı yaz. Kota hesabı: 1 ucuz çizim ≈ 170, 1 güçlü çizim ≈ 1.400 nöron (8 ucuz çizime denk); günlük ücretsiz kota 10.000.
+        Önerilenlerle bir video en kötü ~6.600 nöron harcar. Kota biterse kalan sahneler çizilmez ve video o gün çıkmaz.</p>
       <label>🚦 Yayın kalite eşiği</label>
       <select id="hYayinEsik">${secenek(String(a.HIKAYE_YAYIN_ESIGI ?? 5), [["0", "Kapalı — her video otomatik yayınlansın"], ["4", "4 — sadece çok bozuk sahne varsa beklet"],
         ["5", "5 — önerilen"], ["6", "6 — daha seçici"], ["7", "7 — çok seçici (sık onay ister)"]])}</select>
@@ -1233,10 +1236,10 @@ async function ayarlar() {
     <p class="ince" id="hikayeGorunumNot">📖 Hikâye kanalında altyazı sade ve zarif (normal harf, altın vurgu), geçişler yumuşak kararma, müzik huzurlu/masalsı; renk ve yer her videoda aynı kalır (kanal kimliği).</p>
     <div id="bilimStil">
     <label><input type="checkbox" id="cesit" ${a.GORSEL_CESITLILIK ? "checked" : ""}> Her videoda farklı stil (vurgu rengi, altyazı yeri, karartma ±%6, geçiş, ekrandaki kelime sayısı)</label>
-    <div class="satir"><div><label>Altyazı boyutu</label><input type="number" id="aBoyut" min="60" max="140" value="${esc(a.ALTYAZI_BOYUT)}"></div>
-      <div><label>Ekranda kelime <span class="ince" id="aKelimeNot"></span></label><input type="number" id="aKelime" min="1" max="5" value="${esc(a.ALTYAZI_KELIME)}"></div></div>
-    <div class="satir"><div><label>Ekran yazısı (açılış) boyutu</label><input type="number" id="hBoyut" min="60" max="150" value="${esc(a.HOOK_BOYUT)}"></div>
-      <div><label>Ekran yazısı süresi (sn)</label><input type="number" id="hSure" min="1" max="6" step="0.1" value="${esc(a.HOOK_SURE)}"></div></div>
+    <div class="satir"><div><label>Altyazı boyutu</label><input type="number" id="aBoyut" min="60" value="${esc(a.ALTYAZI_BOYUT)}"></div>
+      <div><label>Ekranda kelime <span class="ince" id="aKelimeNot"></span></label><input type="number" id="aKelime" min="1" value="${esc(a.ALTYAZI_KELIME)}"></div></div>
+    <div class="satir"><div><label>Ekran yazısı (açılış) boyutu</label><input type="number" id="hBoyut" min="60" value="${esc(a.HOOK_BOYUT)}"></div>
+      <div><label>Ekran yazısı süresi (sn)</label><input type="number" id="hSure" min="1" step="0.1" value="${esc(a.HOOK_SURE)}"></div></div>
     <div id="stilKutu"><label>Farklı stilde hangi seçenekler kullanılsın? <span class="ince">(hepsi işaretliyse karışık; haftalık analiz de önerebilir)</span></label>
       ${Object.entries(STIL_TURLERI).map(([tur, [ad, sec]]) => {
         const izinli = (a.STIL_TERCIHLERI || {})[tur] || [];
@@ -1582,17 +1585,19 @@ async function ayarlar() {
   $("#ayarKaydet").onclick = async () => {
     const saatler = [...document.querySelectorAll(".saat")].map(x => x.value).filter(Boolean).sort();
     if (!saatler.length) return bildir("En az bir yayın saati olmalı.");
+    // Sayı alanları sınırsız (kullanıcı kararı): boş / geçersiz / eksi değer → önerilen
+    const say = (sec, vars) => { const x = parseFloat($(sec).value); return Number.isFinite(x) && x >= 0 ? x : vars; };
     const yeni = {
       YAYINLANMA_SAATLERI: saatler,
       TREND_GUNLERI: [...document.querySelectorAll("[data-gun]")].filter(x => x.checked).map(x => +x.dataset.gun),
-      GUNLUK_YUKLEME_LIMITI: Math.min(6, Math.max(1, +$("#limit").value || 6)),
+      GUNLUK_YUKLEME_LIMITI: say("#limit", 6) || 6,
       YUKLEME_ONCEDEN_SAAT: +$("#onceden").value, URETIM_RITMI: $("#ritim").value,
       KATEGORILER: $("#kategoriler").value.split("\n").map(x => x.trim()).filter(Boolean),
       KONU_NOTU: $("#konuNotu").value.trim(), TALEP_KONTROLU: $("#talep").checked, SENARYO_NOTU: $("#senaryoNotu").value.trim(), GORSEL_NOTU: $("#gorselNotu").value.trim(), ANIMASYON_STILI: $("#animStil").value.trim() || VARSAYILAN_AYARLAR.ANIMASYON_STILI, ANIMASYON_VARSAYILAN: $("#animVarsayilan").checked,
-      KANAL_TURU: $("#kanalTuru").value, HIKAYE_STILI: $("#hikayeStil").value.trim() || VARSAYILAN_AYARLAR.HIKAYE_STILI, HIKAYE_CIZIM_MODELI: $("#hikayeModel").value, HIKAYE_KONTROL_ESIK: +$("#hEsik").value, HIKAYE_YENIDEN_CIZIM: +$("#hYeniden").value,
-      HIKAYE_YENIDEN_BUTCE: Math.min(30, Math.max(0, +$("#hButce").value || 0)), HIKAYE_KALITE_YEDEK: $("#hKaliteYedek").checked,
+      KANAL_TURU: $("#kanalTuru").value, HIKAYE_STILI: $("#hikayeStil").value.trim() || VARSAYILAN_AYARLAR.HIKAYE_STILI, HIKAYE_CIZIM_MODELI: $("#hikayeModel").value, HIKAYE_KONTROL_ESIK: say("#hEsik", 7), HIKAYE_YENIDEN_CIZIM: say("#hYeniden", 4),
+      HIKAYE_YENIDEN_BUTCE: say("#hButce", 20), HIKAYE_ACIL_HAK: say("#hAcil", 4), HIKAYE_KALITE_HAK: say("#hGuclu", 0), HIKAYE_KALITE_YEDEK: true,
       HIKAYE_YAYIN_ESIGI: +$("#hYayinEsik").value, HIKAYE_HAREKET: $("#hHareket").value,
-      HIKAYE_SURE: Math.min(90, Math.max(35, +$("#hikayeSure").value || 45)),
+      HIKAYE_SURE: say("#hikayeSure", 45) || 45,
       HIKAYE_SERI_ACIK: (() => { const l = [...document.querySelectorAll("[data-hseri]:checked")].map(x => x.dataset.hseri);
         return l.length === SERI_HIKAYE.length ? [] : l; })(),
       ...(() => { bicim._oku(); const r = {HIKAYE_OGRENME: $("#hOgrenme").value};
@@ -1625,11 +1630,11 @@ async function ayarlar() {
       GOREV_MODELLERI: Object.fromEntries(Object.entries({...(a.GOREV_MODELLERI || {}),
         ...Object.fromEntries([...document.querySelectorAll("[data-gorev]")].map(x => [x.dataset.gorev, x.value]))}).filter(([, v]) => v)),
     };
-    const sinirla = (x, alt, ust, vars) => Number.isFinite(x) && x >= alt && x <= ust ? x : vars;
-    yeni.ALTYAZI_BOYUT = sinirla(yeni.ALTYAZI_BOYUT, 60, 140, VARSAYILAN_AYARLAR.ALTYAZI_BOYUT);
-    yeni.ALTYAZI_KELIME = sinirla(yeni.ALTYAZI_KELIME, 1, 5, VARSAYILAN_AYARLAR.ALTYAZI_KELIME);
-    yeni.HOOK_BOYUT = sinirla(yeni.HOOK_BOYUT, 60, 150, VARSAYILAN_AYARLAR.HOOK_BOYUT);
-    yeni.HOOK_SURE = sinirla(yeni.HOOK_SURE, 1, 6, VARSAYILAN_AYARLAR.HOOK_SURE);
+    const sinirla = (x, vars) => Number.isFinite(x) && x > 0 ? x : vars;
+    yeni.ALTYAZI_BOYUT = sinirla(yeni.ALTYAZI_BOYUT, VARSAYILAN_AYARLAR.ALTYAZI_BOYUT);
+    yeni.ALTYAZI_KELIME = sinirla(yeni.ALTYAZI_KELIME, VARSAYILAN_AYARLAR.ALTYAZI_KELIME);
+    yeni.HOOK_BOYUT = sinirla(yeni.HOOK_BOYUT, VARSAYILAN_AYARLAR.HOOK_BOYUT);
+    yeni.HOOK_SURE = sinirla(yeni.HOOK_SURE, VARSAYILAN_AYARLAR.HOOK_SURE);
     if (!yeni.KATEGORILER.length) return bildir("En az bir kategori olmalı.");
     if (yeni.KANAL_TURU === "hikaye" && !document.querySelector("[data-hseri]:checked")) return bildir("📺 En az bir hikâye serisi işaretli olmalı.");
     for (const [tur, [, , , baslik]] of Object.entries(BICIMLER))
