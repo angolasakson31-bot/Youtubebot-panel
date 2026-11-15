@@ -491,11 +491,13 @@ function siradakiAlan() {
       if (v.durum === "bekliyor") {
         const t = gunluk ? ilkCalisma(z, URETIM_PENCERE) : null;
         uretim = v.hemen ? "hemen" : gunluk ? (t ? zamanKisa(t) : "sıradaki çalışmada") : "Perşembe üretiminde";
-        dugme = `<button data-konu-degis="${esc(v.id)}">✏️ Konu ve ayarları değiştir</button>`;
+        dugme = `<button data-konu-degis="${esc(v.id)}">✏️ Konu ve ayarları değiştir</button>`
+          + (v.tur === "hikaye" ? `<button data-baska="${esc(v.id)}" data-uretildi="">🎲 Başka hikâye seç</button>` : "");
       } else {
         uretim = (v.kalite_hatasi || []).length ? "🚫 kalite hatası — yeniden denenecek" : "✅ üretildi";
         if (["video_hazir", "onaylandi"].includes(v.durum))     // üretildi, henüz YouTube'a gitmedi: izle / değiştir
-          dugme = `<button data-git="${esc(v.id)}">▶️ İzle</button><button data-id="${esc(v.id)}" data-islem="duzenle">🔁 Değiştirip yeniden üret</button>`;
+          dugme = `<button data-git="${esc(v.id)}">▶️ İzle</button><button data-id="${esc(v.id)}" data-islem="duzenle">🔁 Değiştirip yeniden üret</button>`
+            + (v.tur === "hikaye" ? `<button data-baska="${esc(v.id)}" data-uretildi="1">🎲 Başka hikâye ile yeniden üret</button>` : "");
       }
       if (v.durum === "yuklendi") yukleme = "✅ YouTube'da (gizli, zamanlı)";
       else if (v.onay_bekle) yukleme = "👀 sen onaylayınca";
@@ -705,6 +707,19 @@ async function videolar() {
   });
   document.querySelectorAll("[data-islem]").forEach(b => b.onclick = () => videoIslem(b.dataset.islem, b.dataset.id, b));
   document.querySelectorAll("[data-konu-degis]").forEach(b => b.onclick = () => konuModal(b.dataset.konuDegis, b.dataset.zaman));
+  document.querySelectorAll("[data-baska]").forEach(b => b.onclick = async () => {
+    const id = b.dataset.baska, uretildi = !!b.dataset.uretildi;
+    const soru = uretildi
+      ? "Bu video başka bir hikâyeyle baştan üretilsin mi?\n\nMaliyet: ~5-20 sent (hikâye seçimi + senaryo + sahne tarifleri), ElevenLabs'ten ~750 karakter ve Cloudflare'in günlük çizim kotasından bir videoluk çizim. Aynı gün ikinci kez çizmek kotayı bitirebilir; o zaman video ertesi gün çıkar."
+      : "Bu saate başka bir hikâye seçilsin mi?\n\nVideo henüz üretilmediği için maliyeti çok az (~1-6 sent, sadece hikâye seçimi). Eski hikâye bir daha önerilmez.";
+    if (!confirm(soru)) return;
+    b.disabled = true;
+    try {
+      if (uretildi) await kuyrugaEkle("yeniden.json", {id, yeni_hikaye: true}, `başka hikâye ${id}`);
+      else await kuyrugaEkle("onay.json", {duzenle: [{id, yeni_hikaye: true}]}, `başka hikâye ${id}`);
+      bildir("🎲 İstek gönderildi, birkaç dakika içinde yeni hikâye gelir.");
+    } catch (e) { bildir("Gönderilemedi: " + e.message); b.disabled = false; }
+  });
   document.querySelectorAll("[data-git]").forEach(b => b.onclick = () => {      // 📋 → videonun kartına git (izle düğmesi orada)
     const k = document.getElementById("k_" + b.dataset.git);
     if (k) { k.scrollIntoView({behavior: "smooth", block: "center"}); k.style.outline = "2px solid var(--vurgu, #e8b23a)"; setTimeout(() => k.style.outline = "", 2500); }
@@ -1738,6 +1753,22 @@ function hikayePerformansi(perf, plan) {
       ${satir.length < 3 ? "En az 3 video olunca sistem seçimlerde bu tabloyu kullanır." : `Sistem seçimlerde bunu kullanıyor (${{dengeli: "dengeli", agresif: "agresif", kapali: "kapalı"}[vAyar("HIKAYE_OGRENME")] || "dengeli"}).`}</p>
     ${grup("kalip", "🧩 Anlatım kalıbı")}${grup("ton", "🎭 Ton")}${grup("kapanis", "🎬 Kapanış")}${grup("seri", "📺 Seri")}</div>`;
 }
+// 🎨 Çizim öğrenmesi: cizim_rehberi.json (kurallar) + plan cizim_kaydi (video başına ilk deneme puanı)
+function cizimOgrenmesi(rehber, plan) {
+  const vid = (plan || []).filter(v => (v.cizim_kaydi || []).length).slice(-12);
+  if (!vid.length && !(rehber && rehber.kurallar)) return "";
+  const ort = (l, a) => l.reduce((t, k) => t + (k[a] || 0), 0) / l.length;
+  const satirlar = vid.map(v => { const ilk = ort(v.cizim_kaydi, "ilk"), son = ort(v.cizim_kaydi, "son");
+    return `<div style="margin-top:6px"><div class="satir"><span>${esc((v.baslik || v.konu || v.id).slice(0, 40))}</span>
+      <span style="text-align:right">ilk deneme ${ilk.toFixed(1)} → sonuç ${son.toFixed(1)} /10</span></div>
+      <div class="cubuk"><i style="width:${ilk * 10}%"></i></div></div>`; }).join("");
+  return `<div class="kart"><h3>🎨 Çizim öğrenmesi</h3>
+    <p class="ince">Her sahnenin ilk denemede aldığı puan kaydedilir. Tutan ve tutmayan tariflerden çizim yapay zekâsının "dili" öğrenilir;
+      sahne tarifleri bu kurallarla yazılır. Videolar geçtikçe "ilk deneme" puanının yükselmesi gerekir (az yeniden çizim = kota tasarrufu).</p>
+    ${satirlar}
+    ${rehber && rehber.kurallar ? `<h4 style="margin-top:12px">📘 Öğrenilen kurallar <span class="ince">(${esc(rehber.zaman || "")}, ${rehber.video_sayisi || 0} videodan)</span></h4>
+      <ul class="ince" style="margin:4px 0 0 18px">${rehber.kurallar.map(k => `<li>${esc(k)}</li>`).join("")}</ul>` : ""}</div>`;
+}
 async function istatistik() {
   $("#ana").innerHTML = `<p class="alt">Yükleniyor…</p>`;
   const [perf, maliyet, st, hPlan] = await Promise.all([dosyaOku("performans.json", null), dosyaOku("maliyet.json", []),
@@ -1764,6 +1795,7 @@ async function istatistik() {
     })()}
     <p class="ince">Gerçek fatura: Anthropic Console → Usage.</p></div>`;
   html += hikayePerformansi(perf, hPlan);
+  if (hikayeKanali()) html += cizimOgrenmesi(await dosyaOku("cizim_rehberi.json", null), hPlan);
   if (perf && perf.analytics && perf.analytics !== "var") {
     const neden = {
       api_kapali: `Google Cloud projesinde <b>YouTube Analytics API</b> açık değil. <a href="https://console.cloud.google.com/apis/library/youtubeanalytics.googleapis.com" target="_blank">Bu sayfayı aç</a> → doğru projeyi seç → <b>Enable / Etkinleştir</b>. Bir kere yapman yeter.`,
