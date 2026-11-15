@@ -146,6 +146,21 @@ const GOREVLER_HIKAYE = {
   detaylar: "Sahne tarifleri / başlık / açıklama", karakter_karti: "Karakter kartı (kendi senaryonda)",
   cizim_kontrol: "Çizim kontrolü (her sahneye bakar, bozuksa yeniden çizdirir)", ceviri: "Çizim stilini İngilizceye çevirme",
   strateji: "Haftalık öğrenme analizi"};
+// Her işin ne yaptığı ve hangi modelin yeteceği — kısa, sade (kullanıcı isteği 15 Kasım 2026)
+const GOREV_ACIKLAMA = {
+  guncel_konular: "İnternette son günlerin bilim haberlerini bulur. Orta model (Sonnet) yeter.",
+  evergreen_konular: "Her zaman ilgi çeken konuları seçer. Orta model yeter.",
+  senaryo: "Videoda okunan metni yazar. Videonun kalitesini en çok bu belirler → en iyi model burada değer.",
+  hook_secimi: "Birkaç açılış cümlesinden en çarpıcıyı seçer. Ucuz model (Haiku) yeter.",
+  dogrulama: "İsim, tarih, sayıları internetten kontrol eder. Orta model yeter.",
+  detaylar: "Sahne çizim tariflerini, başlığı, açıklamayı yazar. Çizimlerin doğru çıkması bu tariflere bağlı → orta model önerilir.",
+  seri_yorum: "Eski videolara seri adı ve yorum yazar. Ucuz model yeter.",
+  strateji: "Haftada bir, hangi videolar tuttu diye bakıp ders çıkarır. Orta model yeter.",
+  hikaye_secimi: "Anlatılacak hikâyeyi ve anlatım biçimini seçer. Orta model yeter; en iyi model daha yaratıcı seçer.",
+  karakter_karti: "Kendi yazdığın senaryoda karakterlerin görünüşünü çıkarır. Ucuz model yeter.",
+  cizim_kontrol: "Her çizime bakıp puan verir; kötüyse yeniden çizdirir. Çok sık çalışır → ucuz model (Haiku) önerilir.",
+  ceviri: "Türkçe çizim stilini çizim yapay zekâsı için İngilizceye çevirir. Ucuz model yeter.",
+};
 // Panelde "⛔ Yapma" seçilebilen işler (ortak.KAPATILABILIR_GOREVLER ile aynı)
 const KAPATILABILIR = new Set(["hook_secimi", "dogrulama", "seri_yorum", "strateji", "cizim_kontrol"]);   // güncel konu: İçerik → haber günleri
 const GOREV_KAPALI_NOTU = {
@@ -1073,6 +1088,7 @@ async function ayarlar() {
     <p class="ince">Açıkken yeni konu ve video üretilmez (tatil, bakiye bitti…). Zaten hazır / YouTube'a yüklenmiş videolar ve ⚡ ile istediklerin etkilenmez.</p>
     <label>Yayın saatleri (Türkiye) — günde kaç saat yazarsan o kadar video</label>
     <div id="saatler"></div><div class="butonlar"><button id="saatEkle">+ Saat ekle</button></div>
+    <p class="ince">Videolar bu saatlerde herkese açılır. Hikâye kanalında günde 1 video önerilir (çizim kotası 2'ye yetmez).</p>
 <div id="bilimSure">
     <label>Günlük videoların süresi</label>
     <select id="gunlukSure">${sureSecenek(a.GUNLUK_SURE || 30)}</select>
@@ -1081,11 +1097,13 @@ async function ayarlar() {
     <label>Videolar ne zaman üretilsin?</label>
     <select id="ritim">${secenek(a.URETIM_RITMI, [["gunluk", "Her sabah o günün videoları (konular taze, beklemez)"],
       ["haftalik", "Haftada bir, Perşembe 14 video birden"]])}</select>
+    <p class="ince">Günlükte video her sabah 07:17'de üretilir; konusu bir gün önceden seçilir, 📋 Sıradaki videolar'da görürsün.</p>
     <label>Onay</label>
     <select id="onayModu">${secenek(a.ONAY_MODU === "pazar" && a.OTOMATIK_ONAY === false ? "elle" : a.ONAY_MODU, [
       ["otomatik", "Tam otomatik — üretilir üretilmez yüklenir (ben bakmam)"],
       ["pazar", "Ben onaylarım; Pazar 20:00'de reddetmediklerim otomatik onaylanır"],
       ["elle", "Sadece ben onaylarım (onaylamadığım yüklenmez)"]])}</select>
+    <p class="ince">Otomatikte bile çizim puanı düşük kalan video yayınlanmaz, senin onayını bekler (🖼️ Görüntü → yayın kalite eşiği).</p>
     <details style="margin-top:8px"><summary class="alt">Gelişmiş</summary>
       <label>Videolar YouTube'a ne zaman yüklensin?</label>
       <select id="onceden">${secenek(String(a.YUKLEME_ONCEDEN_SAAT), [["30", "Yayından ~1 gün önce (önerilen, güvenlik payı var)"],
@@ -1093,6 +1111,7 @@ async function ayarlar() {
       <p class="ince">Video yüklenene kadar bizde bekler: başlığını, saatini, senaryosunu serbestçe değiştirebilirsin.</p>
       <label>Günlük en fazla YouTube yüklemesi (YouTube kotası: en fazla 6)</label>
       <input type="number" id="limit" min="1" value="${esc(a.GUNLUK_YUKLEME_LIMITI)}">
+      <p class="ince">Bir yükleme YouTube kotasının 1.600 birimini harcar, günlük kota 10.000. 6'dan fazlası ertesi güne kalır.</p>
     </details>
   </div>
 
@@ -1150,6 +1169,7 @@ async function ayarlar() {
       <input id="hSesId" placeholder="DpEiQMnL9WxMsymCsjPY" value="${esc(a.HIKAYE_SES_ID || "")}">
       <label>Ses ne kadar duygulu olsun?</label>
       <select id="hSesDuygu">${secenek(a.HIKAYE_SES_DUYGU == null ? "" : String(a.HIKAYE_SES_DUYGU), [["", "En duygulu (seçtiğin E3, önerilen)"], ["0.5", "Dengeli"], ["1", "Sakin ve düz"]])}</select>
+      <p class="ince">Duygulu ses daha canlı anlatır ama ara sıra tonlaması tuhaf çıkabilir; sakin ses daha düzdür, hata yapmaz.</p>
       <h4 style="margin-top:12px">Yedek ses</h4>
     </div>
     <label>Ses motoru</label><select id="motor">${secenek(a.SES_MOTORU, [["edge", "Edge TTS (ücretsiz)"], ["elevenlabs", "ElevenLabs (daha doğal, ücretli)"], ["ek", "Ek sağlayıcı (🔌 Bağlantılar'da eklediğin)"]])}</select>
@@ -1200,6 +1220,7 @@ async function ayarlar() {
       <label>🎥 Çizimlerdeki kamera hareketi (2.5D)</label>
       <select id="hHareket">${secenek(a.HIKAYE_HAREKET || "normal", [["normal", "Normal — derinlikli yavaş kamera hareketi"], ["hafif", "Hafif — daha sakin, kenarlarda bozulma daha az"],
         ["kapali", "Kapalı — sadece yavaş yakınlaşma"]])}</select>
+      <p class="ince">Çizimi derinliğine göre hafifçe oynatır, resim canlı görünür. Kenarlarda bozulma görürsen "Hafif" seç.</p>
       <p class="ince">Ücretsiz kotayla (günde ~55 ucuz çizim) günde 1 video için önerilen ayarlar rahat yeter. "Çizim kontrolü" ⛔ yapılırsa (🤖 kartı) bu bölüm devre dışı kalır.</p>
       <p class="ince">Cloudflare hesap numarası ve anahtarı 🔌 Bağlantılar kartında. Ücretsiz kota günde ~24 çizim (video başına ~15).</p>
     </div>
@@ -1254,6 +1275,7 @@ async function ayarlar() {
     <label><input type="checkbox" id="muzik" ${a.FON_MUZIGI ? "checked" : ""}> Fon müziği + efektler</label>
     <label>Müzik seviyesi: <b id="mVal">${Math.round(a.MUZIK_SESI * 100)}%</b></label>
     <input type="range" id="muzikSes" min="4" max="40" value="${Math.round(a.MUZIK_SESI * 100)}">
+    <p class="ince">Fon müziğinin sesi. Konuşma sırasında müzik kendiliğinden kısılır; %15 civarı önerilir.</p>
     <label><input type="checkbox" id="yorum" ${a.OTOMATIK_YORUM ? "checked" : ""}> Yayından sonra kanal hesabıyla otomatik yorum at</label>
   </div>
 
@@ -1386,6 +1408,7 @@ async function ayarlar() {
       if (gorevSecim[k] && !l.some(([v]) => v === gorevSecim[k])) l.push([gorevSecim[k], gorevSecim[k] + " (listede yok)"]);
       return `<label>${esc(ad)}${k === "guncel_konular" ? ' <span class="ince">(hangi günler: 🧠 İçerik → haber günleri)</span>' : KAPATILABILIR.has(k) ? "" : ' <span class="ince">(zorunlu)</span>'}</label>
       <select data-gorev="${k}">${l.map(([v, t]) => `<option value="${esc(v)}" ${(gorevSecim[k] || "") === v ? "selected" : ""}>${esc(t)} — ${dolar(aylikMaliyet(k, v, ta))}/ay</option>`).join("")}</select>
+      ${GOREV_ACIKLAMA[k] ? `<p class="ince" style="margin-top:2px">ℹ️ ${GOREV_ACIKLAMA[k]}</p>` : ""}
       <p class="ince" style="margin-top:2px" data-tahmin="${k}"></p>
       ${GOREV_KAPALI_NOTU[k] ? `<p class="ince" style="margin-top:2px">⛔ seçilirse: ${GOREV_KAPALI_NOTU[k]}</p>` : ""}`;
     }).join("");
