@@ -140,14 +140,21 @@ const GOREVLER = {
   senaryo: "Senaryo yazımı", hook_secimi: "Açılış (hook) seçimi", dogrulama: "Bilgi doğrulama (internet araması ister)",
   detaylar: "Başlık / açıklama / görsel kelimeler", seri_yorum: "Seri + yorum (eski videolar)", strateji: "Haftalık öğrenme analizi",
 };
+// 📖 ayarlar.py GOREVLER_HIKAYE ile aynı
+const GOREVLER_HIKAYE = {
+  hikaye_secimi: "Hikâye seçimi (kalıp, ton, kapanış, seri)", senaryo: "Hikâye senaryosu + karakter kartı",
+  detaylar: "Sahne tarifleri / başlık / açıklama", karakter_karti: "Karakter kartı (kendi senaryonda)",
+  cizim_kontrol: "Çizim kontrolü (her sahneye bakar, bozuksa yeniden çizdirir)", ceviri: "Çizim stilini İngilizceye çevirme",
+  strateji: "Haftalık öğrenme analizi"};
 // Panelde "⛔ Yapma" seçilebilen işler (ortak.KAPATILABILIR_GOREVLER ile aynı)
-const KAPATILABILIR = new Set(["hook_secimi", "dogrulama", "seri_yorum", "strateji"]);   // güncel konu: İçerik → haber günleri
+const KAPATILABILIR = new Set(["hook_secimi", "dogrulama", "seri_yorum", "strateji", "cizim_kontrol"]);   // güncel konu: İçerik → haber günleri
 const GOREV_KAPALI_NOTU = {
   guncel_konular: "internette haber aranmaz, bütün videolar kalıcı (evergreen) konulardan olur",
   hook_secimi: "açılış yarışması yapılmaz, ilk yazılan açılış kullanılır",
   dogrulama: "bilgiler internette kontrol edilmez (daha ucuz, ama hata kaçabilir)",
   seri_yorum: "eski videolara seri ve yorum eklenmez",
   strateji: "haftalık öğrenme yapılmaz, sistem performanstan ders çıkarmaz",
+  cizim_kontrol: "çizimlere bakılmaz, bozuk çizim (yazı, fazla bacak, başka hayvan) videoya girebilir",
 };
 // ── Aylık maliyet tahmini (ayarlar.py FIYATLAR / MALIYET_PROFILLERI / WEB_ARAMA_FIYATI ile aynı) ──
 const FIYATLAR = {"claude-opus-5-5": [4.00, 20.00], "claude-sonnet-5-5": [2.00, 10.00], "claude-haiku-5-5": [0.10, 0.50]};
@@ -158,10 +165,12 @@ const PROFIL_MODELLERI = {   // "Varsayılan" seçilince hangi model çalışır
   kalite: {senaryo: "claude-opus-5-5", dogrulama: "claude-sonnet-5-5"},
 };
 const VARSAYILAN_GOREV_MODELI = {guncel_konular: "claude-sonnet-5-5", evergreen_konular: "claude-sonnet-5-5",
-  hook_secimi: "claude-haiku-5-5", detaylar: "claude-haiku-5-5", seri_yorum: "claude-haiku-5-5", strateji: "claude-sonnet-5-5"};
+  hook_secimi: "claude-haiku-5-5", detaylar: "claude-haiku-5-5", seri_yorum: "claude-haiku-5-5", strateji: "claude-sonnet-5-5",
+  hikaye_secimi: "claude-sonnet-5-5", karakter_karti: "claude-haiku-5-5", cizim_kontrol: "claude-haiku-5-5", ceviri: "claude-haiku-5-5"};
 // Ölçüm yoksa kullanılan tipik çağrı büyüklükleri (11 Kasım 2026 ölçümü): [giriş token, çıkış token, web araması]
 const TIPIK_CAGRI = {guncel_konular: [24650, 490, 3], evergreen_konular: [2640, 460, 0], senaryo: [1850, 2570, 0],
-  hook_secimi: [1620, 920, 0], dogrulama: [13730, 1830, 2], detaylar: [1150, 1510, 0], seri_yorum: [810, 510, 0], strateji: [6000, 1500, 0]};
+  hook_secimi: [1620, 920, 0], dogrulama: [13730, 1830, 2], detaylar: [1150, 1510, 0], seri_yorum: [810, 510, 0], strateji: [6000, 1500, 0],
+  hikaye_secimi: [3500, 900, 0], karakter_karti: [700, 400, 0], cizim_kontrol: [1400, 60, 0], ceviri: [200, 150, 0]};
 function modelFiyati(model, saglayicilar) {
   if (!model) return null;
   if (model.startsWith("ek")) {
@@ -177,7 +186,8 @@ function aylikCagri(is, ayar) {
   const video = (ayar.saatSayisi || 2) * 30, gunluk = ayar.ritim !== "haftalik";
   const trendGun = Math.round((ayar.trendGunSayisi ?? 4) * 4.3);   // güncel konu sadece trend günlerinde aranır
   return {senaryo: video, hook_secimi: video, dogrulama: video, detaylar: video,
-          guncel_konular: gunluk ? trendGun : 8, evergreen_konular: gunluk ? 30 : 8, strateji: 4, seri_yorum: 0}[is] ?? 0;
+          guncel_konular: gunluk ? trendGun : 8, evergreen_konular: gunluk ? 30 : 8, strateji: 4, seri_yorum: 0,
+          hikaye_secimi: gunluk ? 30 : 8, karakter_karti: 0, cizim_kontrol: video * 16, ceviri: 30}[is] ?? 0;
 }
 function cagriBuyuklugu(is, kayitlar) {
   const l = (kayitlar || []).filter(k => k.is === is && (k.giris || k.cikis));
@@ -455,19 +465,28 @@ function siradakiAlan() {
       dugme = `<button data-konu-degis="" data-zaman="${z.toISOString()}">✏️ Bu saate video planla</button>`;
     } else {
       const bk = bekleyenKonu(v.id);
+      const hk = v.tur === "hikaye" ? [v.seri || v.seri_secim ? "📺 " + (v.seri || v.seri_secim) : "",
+        v.kalip ? "🧩 " + bicimAdi("kalip", v.kalip) : "🧩 kalıp: sistem seçecek", v.ton ? "🎭 " + bicimAdi("ton", v.ton) : "",
+        v.kapanis ? "🎬 " + bicimAdi("kapanis", v.kapanis) : "", `⏱️ ${v.hedef_sure || vAyar("HIKAYE_SURE") || 45} sn`,
+        v.ses_id ? "🎙️ özel ses" : "", v.cizim_stili ? "🪟 özel stil" : "", v.video_notu ? "📝 özel talimat" : ""].filter(Boolean).join(" · ") : "";
       konu = `<b>${v.gorunum === "animasyon" ? "🎬 " : ""}${esc(v.baslik || v.konu)}</b>${v.baslik && v.baslik !== v.konu ? `<div class="ince">Konu: ${esc(v.konu)}</div>` : ""}`
+        + (hk ? `<div class="ince">${esc(hk)}</div>` : "")
         + (bk ? `<div class="ince">⏳ yeni konu işleniyor: ${esc(bk.duzenle.find(d => d.id === v.id).konu)}</div>` : "");
       if (v.durum === "bekliyor") {
         const t = gunluk ? ilkCalisma(z, URETIM_PENCERE) : null;
         uretim = v.hemen ? "hemen" : gunluk ? (t ? zamanKisa(t) : "sıradaki çalışmada") : "Perşembe üretiminde";
         dugme = `<button data-konu-degis="${esc(v.id)}">✏️ Konu ve ayarları değiştir</button>`;
-      } else uretim = (v.kalite_hatasi || []).length ? "🚫 kalite hatası — yeniden denenecek" : "✅ üretildi";
+      } else {
+        uretim = (v.kalite_hatasi || []).length ? "🚫 kalite hatası — yeniden denenecek" : "✅ üretildi";
+        if (["video_hazir", "onaylandi"].includes(v.durum))     // üretildi, henüz YouTube'a gitmedi: izle / değiştir
+          dugme = `<button data-git="${esc(v.id)}">▶️ İzle</button><button data-id="${esc(v.id)}" data-islem="duzenle">🔁 Değiştirip yeniden üret</button>`;
+      }
       if (v.durum === "yuklendi") yukleme = "✅ YouTube'da (gizli, zamanlı)";
       else if (v.onay_bekle) yukleme = "👀 sen onaylayınca";
       else if (mod !== "otomatik" && !v.panel_istegi) yukleme = "senin onayından sonra";
       else if (v.hemen || !once) yukleme = "üretimden hemen sonra";
       else {
-        const t = ilkCalisma(z, once, ["07:17", "10:17", "11:07"]);
+        const t = ilkCalisma(z, once, ["07:17", "10:17", "11:07", "15:07", "17:07"]);
         yukleme = ["bekliyor", "seslendirildi"].includes(v.durum) ? "üretimden hemen sonra" : t ? `${zamanKisa(t)} civarı` : "sıradaki yüklemede";
       }
     }
@@ -479,7 +498,8 @@ function siradakiAlan() {
       ${dugme ? `<div class="butonlar" style="margin-top:6px">${dugme}</div>` : ""}</div>`;
   };
   return `<div class="kart"><b>📋 Sıradaki videolar</b> <span class="ince">· önümüzdeki 3 gün</span>
-    <p class="ince" style="margin:4px 0 0">Konular yayından 1 gün önce seçilir, video yayın günü sabahı üretilir. Üretilmeden önce konuyu değiştirebilirsin.</p>
+    <p class="ince" style="margin:4px 0 0">Konu ${hikayeKanali() ? "(hikâye, kalıp, ton, kapanış, seri) " : ""}yayından 1 gün önce seçilir → üretilmeden önce ✏️ ile her şeyini değiştirebilirsin.
+      Video yayın günü sabahı üretilir${+vAyar("YUKLEME_ONCEDEN_SAAT") && +vAyar("YUKLEME_ONCEDEN_SAAT") <= 14 ? ` ve yayından ~${vAyar("YUKLEME_ONCEDEN_SAAT")} saat önce YouTube'a gider; arada ▶️ izleyip 🔁 değiştirebilirsin` : ""}.</p>
     ${satirlar.length ? satirlar.map(satir).join("") : `<p class="alt">Önümüzdeki 3 günde planlı video yok.</p>`}
     ${gunluk ? "" : `<p class="ince">Haftalık ritimde boş saatler Perşembe üretiminde doldurulur.</p>`}
     <p class="ince">Saatler yaklaşıktır: GitHub zamanlanmış işleri bazen gecikmeli başlatır.</p></div>`;
@@ -514,6 +534,13 @@ const kalipSecim = (id, deger, v) => !hikayeKanali() ? "" : `<div>${bicimSecim("
   ${bicimSecim("ton", id + "Ton", v && v.ton)}${bicimSecim("kapanis", id + "Kap", v && v.kapanis)}</div>`;
 const kalipDeger = id => $("#" + id) ? $("#" + id).value : undefined;
 const bicimDegerleri = id => $("#" + id) ? {kalip: $("#" + id).value, ton: $("#" + id + "Ton").value, kapanis: $("#" + id + "Kap").value} : {};
+// 📖 Bu videoya özel masalcı ses + çizim stili (boşsa Ayarlar'daki genel değer)
+const hikayeOzelAlan = (p, v) => !hikayeKanali() ? "" : `<details ${v && (v.ses_id || v.cizim_stili) ? "open" : ""}><summary class="alt">🎙️ Ses ve 🪟 çizim stili (sadece bu video)</summary>
+  <label>Masalcı ses kimliği (Voice ID) <span class="ince">(boşsa Ayarlar'daki ses)</span></label>
+  <input id="${p}SesId" placeholder="${esc(vAyar("HIKAYE_SES_ID") || "DpEiQMnL9WxMsymCsjPY")}" value="${esc((v && v.ses_id) || "")}">
+  <label>Çizim stili <span class="ince">(boşsa Ayarlar'daki stil; Türkçe yaz)</span></label>
+  <textarea id="${p}CizimStili" style="min-height:60px" placeholder="ör. Osmanlı minyatürü gibi, altın varaklı">${esc((v && v.cizim_stili) || "")}</textarea></details>`;
+const hikayeOzelDeger = p => $("#" + p + "SesId") ? {ses_id: $("#" + p + "SesId").value.trim(), cizim_stili: $("#" + p + "CizimStili").value.trim()} : {};
 const gunlukSureAl = () => hikayeKanali() ? (vAyar("HIKAYE_SURE") || 45) : (vAyar("GUNLUK_SURE") || 30);
 // 🔁 Kanal profili değiştir: şu anki ayarlar kanal_profilleri/<tür>.json'a saklanır, hedef kanalın saklı ayarları geri gelir.
 // Bağlantı / maliyet ayarları iki kanalda ortak kalır.
@@ -544,7 +571,7 @@ function konuModal(id, zamanIso) {
     <textarea id="kKonu" style="min-height:80px">${v ? esc(v.konu) : ""}</textarea>
     <div class="satir"><div><label>Video süresi</label><select id="kSure">${sureSecenek(v ? (v.hedef_sure || gunlukSureAl()) : gunlukSureAl())}</select></div>
       <div><label>Yayın tarihi ve saati</label><input type="datetime-local" id="kZaman" value="${zamanDegeri}"></div></div>
-    ${gorunumSecim("kGorunum", v && v.gorunum)}${kalipSecim("kKalip", v && v.kalip, v)}
+    ${gorunumSecim("kGorunum", v && v.gorunum)}${kalipSecim("kKalip", v && v.kalip, v)}${hikayeOzelAlan("k", v)}
     <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="kOnceIzle" style="width:auto" ${v && v.onay_bekle ? "checked" : ""}>
       👀 Yayınlamadan önce ben izleyeyim <span class="ince">(hazır olunca bekler, ✅ Onayla deyince yayınlanır)</span></label>
     <label>📺 Seri</label>
@@ -572,7 +599,7 @@ function konuModal(id, zamanIso) {
     if (zaman !== zamanDegeri.replace("T", " ") && PLAN.some(x => x.yayinlanma === zaman && x.durum !== "reddedildi" && (!v || x.id !== v.id)))
       if (!confirm("Bu saatte zaten bir video var. Yine de bu saate koyayım mı?")) return;
     const ortak = {konu, sure: +$("#kSure").value, gorunum: gorunumDeger("kGorunum"), once_izle: $("#kOnceIzle").checked,
-                   seri_secim: $("#kSeri").value, ...bicimDegerleri("kKalip"), video_notu: $("#kNot").value.trim(), baslik: $("#kBaslik").value.trim(),
+                   seri_secim: $("#kSeri").value, ...bicimDegerleri("kKalip"), ...hikayeOzelDeger("k"), video_notu: $("#kNot").value.trim(), baslik: $("#kBaslik").value.trim(),
                    cumleler: $("#kSenaryo").value.split("\n").map(x => x.trim()).filter(Boolean)};
     $("#kGonder").disabled = true;
     try {
@@ -662,6 +689,11 @@ async function videolar() {
   });
   document.querySelectorAll("[data-islem]").forEach(b => b.onclick = () => videoIslem(b.dataset.islem, b.dataset.id, b));
   document.querySelectorAll("[data-konu-degis]").forEach(b => b.onclick = () => konuModal(b.dataset.konuDegis, b.dataset.zaman));
+  document.querySelectorAll("[data-git]").forEach(b => b.onclick = () => {      // 📋 → videonun kartına git (izle düğmesi orada)
+    const k = document.getElementById("k_" + b.dataset.git);
+    if (k) { k.scrollIntoView({behavior: "smooth", block: "center"}); k.style.outline = "2px solid var(--vurgu, #e8b23a)"; setTimeout(() => k.style.outline = "", 2500); }
+    else bildir("Kartı görmek için Videolar → Sıradakiler filtresini seç.");
+  });
   kararCubugu();
   denemeDugmeleri();
 }
@@ -753,7 +785,7 @@ function yeniVideoModal() {
     <textarea id="yKonu" style="min-height:80px" placeholder="${hikayeKanali() ? "ör. Nasreddin Hoca – Ye kürküm ye" : "ör. Göbeklitepe neden Stonehenge'den 6000 yıl eski ve kim yaptı?"}"></textarea>
     <label>Video süresi</label>
     <select id="ySure">${sureSecenek(gunlukSureAl())}</select>${SURE_NOTU}
-    ${gorunumSecim("yGorunum", "")}${kalipSecim("yKalip", "")}
+    ${gorunumSecim("yGorunum", "")}${kalipSecim("yKalip", "")}${hikayeOzelAlan("y", null)}
     <label>📺 Seri</label>
     <select id="ySeri"><option value="">Otomatik (yapay zekâ konuya göre seçer)</option>
       ${SERI_ADLARI_AL().map(s => `<option>${esc(s)}</option>`).join("")}</select>
@@ -779,7 +811,7 @@ function yeniVideoModal() {
     const istek = {mod: "yeni", konu, sure: +$("#ySure").value, baslik: $("#yBaslik").value.trim(),
                    cumleler: $("#ySenaryo").value.split("\n").map(x => x.trim()).filter(Boolean),
                    once_izle: $("#yOnceIzle").checked, gorunum: gorunumDeger("yGorunum"),
-                   seri_secim: $("#ySeri").value, ...bicimDegerleri("yKalip"), video_notu: $("#yNot").value.trim()};
+                   seri_secim: $("#ySeri").value, ...bicimDegerleri("yKalip"), ...hikayeOzelDeger("y"), video_notu: $("#yNot").value.trim()};
     if ($("#yZamanTur").value === "saat") {
       const z = $("#yZaman").value;
       if (!z) return bildir("Saat seç.");
@@ -942,13 +974,18 @@ function duzenleModal(v) {
       <label>YouTube başlığı</label><input id="dBaslik" value="${esc(v.baslik || "")}">
       <label>Ekran yazısı (ilk 3 saniye, en fazla 6 kelime)</label><input id="dHook" value="${esc(v.hook || "")}">
       <label>Senaryo (her satır bir cümle = bir sahne)</label><textarea id="dCumleler">${esc((v.cumleler || []).join("\n"))}</textarea>
-      <label>Görsel arama kelimeleri (İngilizce, her satır bir sahne)</label>
+      <label>${hikayeKanali() ? "Sahne çizim tarifleri (İngilizce, her satır bir sahne)" : "Görsel arama kelimeleri (İngilizce, her satır bir sahne)"}</label>
       <textarea id="dGorsel" style="min-height:90px">${esc((v.gorsel_kelimeler || []).join("\n"))}</textarea>
       <label>YouTube açıklaması</label><textarea id="dAciklama" style="min-height:70px">${esc(v.aciklama || "")}</textarea>
     </div>
     <div id="dYeniden" style="display:none">
       <label>Konu (boş bırakırsan aynı konu)</label><input id="dKonu" value="${esc(v.konu)}">
+      ${hikayeKanali() ? `${kalipSecim("dKalip", v.kalip, v)}
+        <label>📺 Seri</label><select id="dSeri"><option value="">Otomatik</option>
+          ${SERI_ADLARI_AL().map(x => `<option ${v.seri_secim === x ? "selected" : ""}>${esc(x)}</option>`).join("")}</select>
+        <label>📝 Bu videoya özel talimat</label><textarea id="dNot" style="min-height:50px">${esc(v.video_notu || "")}</textarea>` : ""}
     </div>
+    ${hikayeOzelAlan("d", v)}
     <p class="ince">Yeniden üretim yaklaşık 3-5 dakika sürer. Aynı anda tek video düzenle.</p>
     <div class="butonlar"><button onclick="modalKapat()">Vazgeç</button><button class="ana" id="dGonder">Yeniden üret</button></div>`);
   $("#dMod").onchange = e => {
@@ -961,7 +998,9 @@ function duzenleModal(v) {
     const veri = mod === "duzenle"
       ? {id: v.id, mod, baslik: $("#dBaslik").value, hook: $("#dHook").value, aciklama: $("#dAciklama").value,
          cumleler: satirlar("#dCumleler"), gorsel_kelimeler: satirlar("#dGorsel")}
-      : {id: v.id, mod, konu: $("#dKonu").value};
+      : {id: v.id, mod, konu: $("#dKonu").value, ...bicimDegerleri("dKalip"),
+         ...($("#dSeri") ? {seri_secim: $("#dSeri").value, video_notu: $("#dNot").value.trim()} : {})};
+    Object.assign(veri, hikayeOzelDeger("d"));
     if (mod === "duzenle" && veri.gorsel_kelimeler.length && veri.gorsel_kelimeler.length !== veri.cumleler.length)
       return bildir("Görsel kelime sayısı cümle sayısıyla aynı olmalı (ya da görsel kutusunu boş bırak).", 5000);
     $("#dGonder").disabled = true;
@@ -1049,7 +1088,7 @@ async function ayarlar() {
     <details style="margin-top:8px"><summary class="alt">Gelişmiş</summary>
       <label>Videolar YouTube'a ne zaman yüklensin?</label>
       <select id="onceden">${secenek(String(a.YUKLEME_ONCEDEN_SAAT), [["30", "Yayından ~1 gün önce (önerilen, güvenlik payı var)"],
-        ["14", "Sadece yayın günü sabahı (11:07)"], ["0", "Onaylanınca hemen hepsi (YouTube'da gizli sırada bekler)"]])}</select>
+        ["6", "Yayından ~5 saat önce (15:07) — gün içinde izleyip değiştirebilirsin"], ["14", "Sadece yayın günü sabahı (11:07)"], ["0", "Onaylanınca hemen hepsi (YouTube'da gizli sırada bekler)"]])}</select>
       <p class="ince">Video yüklenene kadar bizde bekler: başlığını, saatini, senaryosunu serbestçe değiştirebilirsin.</p>
       <label>Günlük en fazla YouTube yüklemesi (YouTube kotası: en fazla 6)</label>
       <input type="number" id="limit" min="1" max="6" value="${esc(a.GUNLUK_YUKLEME_LIMITI)}">
@@ -1300,7 +1339,7 @@ async function ayarlar() {
       trendGunSayisi: document.querySelectorAll("[data-gun]").length
         ? document.querySelectorAll("[data-gun]:checked").length : (a.TREND_GUNLERI || []).length});
     const ta = tahminAyar();
-    $("#gorevler").innerHTML = Object.entries(GOREVLER).map(([k, ad]) => {
+    $("#gorevler").innerHTML = Object.entries(a.KANAL_TURU === "hikaye" ? GOREVLER_HIKAYE : GOREVLER).map(([k, ad]) => {
       const l = [...secenekler, ...(KAPATILABILIR.has(k) ? [["kapali", "⛔ Yapma (bu iş kapalı)"]] : [])];
       if (gorevSecim[k] && !l.some(([v]) => v === gorevSecim[k])) l.push([gorevSecim[k], gorevSecim[k] + " (listede yok)"]);
       return `<label>${esc(ad)}${k === "guncel_konular" ? ' <span class="ince">(hangi günler: 🧠 İçerik → haber günleri)</span>' : KAPATILABILIR.has(k) ? "" : ' <span class="ince">(zorunlu)</span>'}</label>
@@ -1552,7 +1591,9 @@ async function ayarlar() {
       OZEL_KAYNAKLAR: kaynakDurum.some(x => x.acik && x.k === "nasa_wiki"),
       GORSEL_EK_MODEL: ((kaynakDurum.find(x => x.acik && x.k.startsWith("ai:")) || {}).k || "").replace(/^ai:/, ""),
       GORSEL_EK_BOYUT: $("#gorselEkBoyut").value.trim() || "1024x1536", GORSEL_EK_FIYAT: +$("#gorselEkFiyat").value || 0,
-      GOREV_MODELLERI: Object.fromEntries([...document.querySelectorAll("[data-gorev]")].map(x => [x.dataset.gorev, x.value]).filter(([, v]) => v)),
+      // Ekranda görünmeyen (diğer kanal türünün) iş seçimleri korunur
+      GOREV_MODELLERI: Object.fromEntries(Object.entries({...(a.GOREV_MODELLERI || {}),
+        ...Object.fromEntries([...document.querySelectorAll("[data-gorev]")].map(x => [x.dataset.gorev, x.value]))}).filter(([, v]) => v)),
     };
     const sinirla = (x, alt, ust, vars) => Number.isFinite(x) && x >= alt && x <= ust ? x : vars;
     yeni.ALTYAZI_BOYUT = sinirla(yeni.ALTYAZI_BOYUT, 60, 140, VARSAYILAN_AYARLAR.ALTYAZI_BOYUT);
