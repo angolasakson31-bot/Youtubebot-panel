@@ -157,7 +157,8 @@ const GOREV_KAPALI_NOTU = {
   cizim_kontrol: "çizimlere bakılmaz, bozuk çizim (yazı, fazla bacak, başka hayvan) videoya girebilir",
 };
 // ── Aylık maliyet tahmini (ayarlar.py FIYATLAR / MALIYET_PROFILLERI / WEB_ARAMA_FIYATI ile aynı) ──
-const FIYATLAR = {"claude-opus-5-5": [4.00, 20.00], "claude-sonnet-5-5": [2.00, 10.00], "claude-haiku-5-5": [0.10, 0.50]};
+const FIYATLAR = {"claude-fable-5-2": [8.00, 40.00], "claude-fable-5-1": [10.00, 50.00], "claude-fable-5": [10.00, 50.00],
+  "claude-opus-5-5": [4.00, 20.00], "claude-sonnet-5-5": [2.00, 10.00], "claude-haiku-5-5": [0.10, 0.50]};
 const WEB_ARAMA_FIYATI = 0.01, TL_KURU = 34;
 const PROFIL_MODELLERI = {   // "Varsayılan" seçilince hangi model çalışır
   ekonomik: {senaryo: "claude-sonnet-5-5", dogrulama: "claude-haiku-5-5"},
@@ -1265,7 +1266,9 @@ async function ayarlar() {
     <label>Varsayılan kalite seviyesi</label>
     <select id="profil">${secenek(a.MALIYET_PROFILI, [["ekonomik", "Ekonomik — senaryo Sonnet, doğrulama Haiku, az arama"],
       ["dengeli", "Dengeli — senaryo Opus, doğrulama Sonnet (önerilen)"], ["kalite", "Kalite — Opus derin düşünür, daha çok arama"]])}</select>
-    <p class="ince">Aşağıda "Varsayılan" bırakılan işler bu seviyeye göre çalışır; bir işe model seçersen o geçerli olur.</p>
+    <p class="ince">Aşağıda "Varsayılan" bırakılan işler bu seviyeye göre çalışır; bir işe model seçersen o geçerli olur.
+      Kalite seviyesi sadece senaryo ve doğrulama işlerini değiştirir; diğer işlerin varsayılanı sabittir.</p>
+    <div id="profilOzet" class="ince" style="margin:4px 0 8px"></div>
     <div id="aiToplam" class="uyari" style="margin:8px 0"></div>
     <div id="gorevler"></div>
     <div class="uyari" style="margin-top:12px"><b>🧪 Test et</b>
@@ -1354,6 +1357,8 @@ async function ayarlar() {
   const gorevCiz = liste => {
     document.querySelectorAll("[data-gorev]").forEach(x => gorevSecim[x.dataset.gorev] = x.value);
     const ekler = liste.flatMap(s => s.modeller.map(m => [`ek${s.yuva}:${m}`, `${s.ad} · ${m}`]));
+    const modelAdi = id => ((claudeListe.find(([k]) => k === id) || CLAUDE_MODELLERI.find(([k]) => k === id) || [, id])[1] || id).replace(/^🆕 /, "");
+    const varsayilanModel = (is, profil) => (PROFIL_MODELLERI[profil] || PROFIL_MODELLERI.dengeli)[is] || VARSAYILAN_GOREV_MODELI[is];
     const secenekler = [["", "Varsayılan (maliyet profili)"], ...claudeListe, ...ekler];
     // Ses / görsel listesi: elle yazılan modeller + sağlayıcıda bulunan, işe uygun adlı modeller (otomatik)
     const uygunlar = desen => liste.flatMap(sg => ((bulunan && bulunan.ek && bulunan.ek[sg.yuva]) || [])
@@ -1372,8 +1377,12 @@ async function ayarlar() {
       trendGunSayisi: document.querySelectorAll("[data-gun]").length
         ? document.querySelectorAll("[data-gun]:checked").length : (a.TREND_GUNLERI || []).length});
     const ta = tahminAyar();
+    const pAd = {ekonomik: "Ekonomik", dengeli: "Dengeli", kalite: "Kalite"}[ta.profil] || ta.profil;
+    if ($("#profilOzet")) $("#profilOzet").innerHTML = `▶ <b>${esc(pAd)}</b> seviyesinde: senaryo <b>${esc(modelAdi(varsayilanModel("senaryo", ta.profil)))}</b>` +
+      (ta.profil === "kalite" ? " (derin düşünür)" : "") + (a.KANAL_TURU === "hikaye" ? "" : `, doğrulama <b>${esc(modelAdi(varsayilanModel("dogrulama", ta.profil)))}</b>`) +
+      ". Bir işe kendi modelini seçtiysen o işte seçtiğin model çalışır.";
     $("#gorevler").innerHTML = Object.entries(a.KANAL_TURU === "hikaye" ? GOREVLER_HIKAYE : GOREVLER).map(([k, ad]) => {
-      const l = [...secenekler, ...(KAPATILABILIR.has(k) ? [["kapali", "⛔ Yapma (bu iş kapalı)"]] : [])];
+      const l = [[ "", `Varsayılan → ${modelAdi(varsayilanModel(k, ta.profil))}`], ...secenekler.slice(1), ...(KAPATILABILIR.has(k) ? [["kapali", "⛔ Yapma (bu iş kapalı)"]] : [])];
       if (gorevSecim[k] && !l.some(([v]) => v === gorevSecim[k])) l.push([gorevSecim[k], gorevSecim[k] + " (listede yok)"]);
       return `<label>${esc(ad)}${k === "guncel_konular" ? ' <span class="ince">(hangi günler: 🧠 İçerik → haber günleri)</span>' : KAPATILABILIR.has(k) ? "" : ' <span class="ince">(zorunlu)</span>'}</label>
       <select data-gorev="${k}">${l.map(([v, t]) => `<option value="${esc(v)}" ${(gorevSecim[k] || "") === v ? "selected" : ""}>${esc(t)} — ${dolar(aylikMaliyet(k, v, ta))}/ay</option>`).join("")}</select>
