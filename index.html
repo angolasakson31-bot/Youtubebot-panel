@@ -104,7 +104,26 @@ const VARSAYILAN_AYARLAR = {
   TTS_SES: "tr-TR-AhmetNeural", TTS_HIZ: "+10%", SES_MOTORU: "edge", ELEVENLABS_SES: "75SIZa3vvET95PHhf1yD", KARARTMA: 0.35, VIDEO_KLIP_ONCELIKLI: true,
   ALTYAZI_BOYUT: 96, ALTYAZI_KELIME: 3, HOOK_SURE: 2.8, HOOK_BOYUT: 100,
   GORSEL_CESITLILIK: true, SERI_ETIKETI: true, FON_MUZIGI: true, MUZIK_SESI: 0.16, OTOMATIK_YORUM: true,
-  IZIN_SURESIZ: false, ONERI_KARARLARI: {}, URETIM_DURAKLAT: false, GUNLUK_SURE: 30, AYLIK_BUTCE: 0, BUTCE_DAVRANIS: "ucuz", KONU_NOTU: "", SENARYO_NOTU: "", GORSEL_NOTU: "", CLOUDFLARE_HESAP: "", UYGUNLUK_KONTROLU: "kapali", OZEL_KONULAR: [], YUKLEME_ONCEDEN_SAAT: 30, URETIM_RITMI: "gunluk", TALEP_KONTROLU: true, STIL_TERCIHLERI: {}, ANIMASYON_STILI: "Modern bilim anlatım animasyonu gibi temiz, stilize 3D görüntü; içini gösteren kesit görünüm; yumuşak stüdyo ışığı; koyu lacivert arka plan; sıcak turuncu vurgular; mat ve pürüzsüz yüzeyler; yüksek detay; konu ortada", ANIMASYON_VARSAYILAN: false, KANAL_TURU: "bilim", HIKAYE_STILI: "Bütün resim küçük düzensiz cam taşlarından oluşan mozaik vitray; ince koyu derz çizgileri; düz 2D çizim; sıcak toprak kahvesi, altın ve bej tonlar; sade, iri hatlı karakterler; dikey tek odak; fotoğraf değil; yazı, harf, dini sembol, haç, hale, melek yok", HIKAYE_SURE: 45, HIKAYE_SERI_ACIK: [], HIKAYE_SES_ID: "", HIKAYE_SES_DUYGU: null, ANIMASYON_BILGI_ETIKETI: true, EK_SAGLAYICILAR: [], GOREV_MODELLERI: {},
+  IZIN_SURESIZ: false, ONERI_KARARLARI: {}, URETIM_DURAKLAT: false, GUNLUK_SURE: 30, AYLIK_BUTCE: 0, BUTCE_DAVRANIS: "ucuz", KONU_NOTU: "", SENARYO_NOTU: "", GORSEL_NOTU: "", CLOUDFLARE_HESAP: "", UYGUNLUK_KONTROLU: "kapali", OZEL_KONULAR: [], YUKLEME_ONCEDEN_SAAT: 30, URETIM_RITMI: "gunluk", TALEP_KONTROLU: true, STIL_TERCIHLERI: {}, ANIMASYON_STILI: "Modern bilim anlatım animasyonu gibi temiz, stilize 3D görüntü; içini gösteren kesit görünüm; yumuşak stüdyo ışığı; koyu lacivert arka plan; sıcak turuncu vurgular; mat ve pürüzsüz yüzeyler; yüksek detay; konu ortada", ANIMASYON_VARSAYILAN: false, KANAL_TURU: "bilim", HIKAYE_STILI: "Bütün resim küçük düzensiz cam taşlarından oluşan mozaik vitray; ince koyu derz çizgileri; düz 2D çizim; sıcak toprak kahvesi, altın ve bej tonlar; sade, iri hatlı karakterler; dikey tek odak; fotoğraf değil; yazı, harf, dini sembol, haç, hale, melek yok", HIKAYE_SURE: 45, HIKAYE_SERI_ACIK: [], HIKAYE_OGRENME: "dengeli", HIKAYE_KALIP_ACIK: [], HIKAYE_TON_ACIK: [], HIKAYE_KAPANIS_ACIK: [],
+  HIKAYE_KALIPLARI: {celiski: "Çelişkili açılış → geçmişe dönüş → mücadele / vazgeçiş → ders izleyiciye bağlanır",
+    sondan: "Sonucu göster → başa dön → hatanın anı → tek cümlelik hikmet",
+    iki_kez: "Aynı durumun iki karşılaşması → değişen tek şey → ikinci karşılaşma → ders sahnenin içinden",
+    soru: "İzleyiciye kısa soru → hikâye → karşı çıkış → cevap = ders",
+    sinav: "Görev / imtihan verilir → yanlış yol → doğru yol → ders",
+    uc_kez: "Aynı hata üç kez → gerçek an → bedel → ders",
+    ters_kose: "Sıradan başlangıç → alay / şüphe → beklenmeyen cevap → ders izleyiciye kalır"},
+  HIKAYE_TONLARI: {huzunlu: "Hüzünlü ve dokunaklı: yavaş ritim, kayıp ya da pişmanlık duygusu, sessiz bir son",
+    bilge: "Bilge ve sakin: dingin, düşündüren, ağır ağır akan anlatım",
+    gerilimli: "Gerilimli: merak ve tedirginlik büyür, dönüm anında nefes kesilir",
+    komik: "Tatlı mizahlı: hafif gülümseten durumlar ama sonunda ciddi bir ders",
+    umut: "Umut veren: zorluktan aydınlığa, sıcak ve içi ısıtan bir son"},
+  HIKAYE_KAPANISLARI: {hikmet: "Tek cümlelik hikmet: dersi kısa, akılda kalan bir söz gibi söyle",
+    izleyiciye: "İzleyiciye dön: 'Sen de…' diye başlayan, dersi izleyicinin hayatına bağlayan tek cümle",
+    soru: "Düşündüren soru: izleyiciye kendi hayatını sorgulatan kısa bir soruyla bitir",
+    ters_kose: "Ters köşe son: son cümlede beklenmedik bir gerçek; ders açıkça söylenmez, sezdirilir",
+    sessiz: "Sessiz bitiş: dersi söyleme; son sahne ya da son replik dersi kendisi versin",
+    atasozu: "Atasözü / vecize: hikâyeye uyan bilinen bir atasözü ya da vecizeyle bitir"},
+  HIKAYE_SES_ID: "", HIKAYE_SES_DUYGU: null, ANIMASYON_BILGI_ETIKETI: true, EK_SAGLAYICILAR: [], GOREV_MODELLERI: {},
   SES_EK_MODEL: "", SES_EK_SES: "alloy", SES_EK_FIYAT: 15, ELEVENLABS_MODEL: "eleven_multilingual_v2", ELEVENLABS_BITIS: "",
   GORSEL_KAYNAKLARI: ["nasa_wiki", "pexels_video", "pixabay_video", "pexels_foto", "pixabay_foto"],
   OZEL_KAYNAKLAR: true,
@@ -470,16 +489,31 @@ const SERI_BILIM = ["Bilim Hâlâ Açıklayamıyor", "Evrenin Sırları", "Bunu 
   "Beynin Gizli Hayatı", "Geleceğin Bilimi"];
 // 📖 ayarlar.py HIKAYE_SERILERI ile aynı adlar
 const SERI_HIKAYE = ["Nasreddin Hoca'dan", "Mesnevi'den", "Kelile ve Dimne'den", "Ezop'tan", "Dünyadan Hikâyeler",
-  "Anadolu'dan Hikâyeler"];
+  "Anadolu'dan Hikâyeler", "Tarihten İbretler", "Halktan İbret Hikâyeleri"];
 const hikayeKanali = () => vAyar("KANAL_TURU") === "hikaye";
 const SERI_ADLARI_AL = () => hikayeKanali() ? SERI_HIKAYE : SERI_BILIM;
+const TON_ADLARI = {huzunlu: "😢 Hüzünlü", bilge: "🦉 Bilge / sakin", gerilimli: "⚡ Gerilimli", komik: "😄 Tatlı mizahlı", umut: "🌅 Umut veren"};
+const KAPANIS_ADLARI = {hikmet: "Tek cümle hikmet", izleyiciye: "İzleyiciye dön (\"Sen de…\")", soru: "Düşündüren soru",
+  ters_kose: "Ters köşe son", sessiz: "Sessiz bitiş", atasozu: "Atasözü / vecize"};
+// 📖 Anlatım biçimi grupları: [ayar adı, açık listesi, ad sözlüğü, başlık]
+const BICIMLER = {kalip: ["HIKAYE_KALIPLARI", "HIKAYE_KALIP_ACIK", () => KALIP_ADLARI, "🧩 Anlatım kalıbı"],
+  ton: ["HIKAYE_TONLARI", "HIKAYE_TON_ACIK", () => TON_ADLARI, "🎭 Ton"],
+  kapanis: ["HIKAYE_KAPANISLARI", "HIKAYE_KAPANIS_ACIK", () => KAPANIS_ADLARI, "🎬 Kapanış (ders nasıl verilsin)"]};
+const bicimAdi = (tur, k) => (BICIMLER[tur][2]()[k]) || k;
 const KALIP_ADLARI = {celiski: "çelişki → geçmiş → ders", sondan: "sondan başla", iki_kez: "iki karşılaşma",
   soru: "soru → hikâye → cevap", sinav: "sınav / imtihan", uc_kez: "üç kez tekrar eden hata", ters_kose: "ters köşe"};
 // 📖 Hikâye kanalında video başına anlatım kalıbı (boş = sistem hikâyeye göre seçer)
-const kalipSecim = (id, deger) => !hikayeKanali() ? "" : `<label>🧩 Anlatım kalıbı</label>
-  <select id="${id}"><option value="">Otomatik (hikâyeye en uygun olanı sistem seçer)</option>
-  ${Object.entries(KALIP_ADLARI).map(([k, ad]) => `<option value="${k}" ${deger === k ? "selected" : ""}>${esc(ad)}</option>`).join("")}</select>`;
+const bicimSecim = (tur, id, deger) => {
+  const [ayar, acikAd, , baslik] = BICIMLER[tur];
+  const acik = vAyar(acikAd) || [];
+  const kodlar = Object.keys(vAyar(ayar) || {}).filter(k => !acik.length || acik.includes(k) || k === deger);
+  return `<div><label>${baslik}</label><select id="${id}"><option value="">Otomatik (sistem seçer)</option>
+  ${kodlar.map(k => `<option value="${esc(k)}" ${deger === k ? "selected" : ""}>${esc(bicimAdi(tur, k))}</option>`).join("")}</select></div>`;
+};
+const kalipSecim = (id, deger, v) => !hikayeKanali() ? "" : `<div>${bicimSecim("kalip", id, deger)}
+  ${bicimSecim("ton", id + "Ton", v && v.ton)}${bicimSecim("kapanis", id + "Kap", v && v.kapanis)}</div>`;
 const kalipDeger = id => $("#" + id) ? $("#" + id).value : undefined;
+const bicimDegerleri = id => $("#" + id) ? {kalip: $("#" + id).value, ton: $("#" + id + "Ton").value, kapanis: $("#" + id + "Kap").value} : {};
 const gunlukSureAl = () => hikayeKanali() ? (vAyar("HIKAYE_SURE") || 45) : (vAyar("GUNLUK_SURE") || 30);
 // 🔁 Kanal profili değiştir: şu anki ayarlar kanal_profilleri/<tür>.json'a saklanır, hedef kanalın saklı ayarları geri gelir.
 // Bağlantı / maliyet ayarları iki kanalda ortak kalır.
@@ -510,7 +544,7 @@ function konuModal(id, zamanIso) {
     <textarea id="kKonu" style="min-height:80px">${v ? esc(v.konu) : ""}</textarea>
     <div class="satir"><div><label>Video süresi</label><select id="kSure">${sureSecenek(v ? (v.hedef_sure || gunlukSureAl()) : gunlukSureAl())}</select></div>
       <div><label>Yayın tarihi ve saati</label><input type="datetime-local" id="kZaman" value="${zamanDegeri}"></div></div>
-    ${gorunumSecim("kGorunum", v && v.gorunum)}${kalipSecim("kKalip", v && v.kalip)}
+    ${gorunumSecim("kGorunum", v && v.gorunum)}${kalipSecim("kKalip", v && v.kalip, v)}
     <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="kOnceIzle" style="width:auto" ${v && v.onay_bekle ? "checked" : ""}>
       👀 Yayınlamadan önce ben izleyeyim <span class="ince">(hazır olunca bekler, ✅ Onayla deyince yayınlanır)</span></label>
     <label>📺 Seri</label>
@@ -538,7 +572,7 @@ function konuModal(id, zamanIso) {
     if (zaman !== zamanDegeri.replace("T", " ") && PLAN.some(x => x.yayinlanma === zaman && x.durum !== "reddedildi" && (!v || x.id !== v.id)))
       if (!confirm("Bu saatte zaten bir video var. Yine de bu saate koyayım mı?")) return;
     const ortak = {konu, sure: +$("#kSure").value, gorunum: gorunumDeger("kGorunum"), once_izle: $("#kOnceIzle").checked,
-                   seri_secim: $("#kSeri").value, kalip: kalipDeger("kKalip"), video_notu: $("#kNot").value.trim(), baslik: $("#kBaslik").value.trim(),
+                   seri_secim: $("#kSeri").value, ...bicimDegerleri("kKalip"), video_notu: $("#kNot").value.trim(), baslik: $("#kBaslik").value.trim(),
                    cumleler: $("#kSenaryo").value.split("\n").map(x => x.trim()).filter(Boolean)};
     $("#kGonder").disabled = true;
     try {
@@ -680,7 +714,7 @@ function videoKarti(v) {
   const cumleler = (v.cumleler || []).map(c => `<p>${esc(c)}</p>`).join("");
   const duzeltme = (v.dogrulama_duzeltmeleri || []).length;
   return `<div class="kart" id="k_${id}">
-    <div>${zamanYazi(v)} · <span class="alt">${v.tur === "trend" ? "📈 güncel" : v.tur === "ozel" ? "⚡ senin isteğin" : v.tur === "hikaye" ? `📖 hikâye${v.kalip ? " · " + esc(KALIP_ADLARI[v.kalip] || v.kalip) : ""}${v.panel_istegi ? " · ⚡ senin isteğin" : ""}` : "🌿 evergreen"}${v.seri ? ` · 📺 ${esc(v.seri)}${v.seri_no ? " #" + esc(v.seri_no) : ""}` : ""}${(v.gorunum || (["bekliyor", "seslendirildi"].includes(v.durum) && vAyar("ANIMASYON_VARSAYILAN") ? "animasyon" : "")) === "animasyon" ? " · 🎬 animasyon" : ""}${v.hedef_sure ? ` · ⏱️ ${v.hedef_sure >= 60 ? (v.hedef_sure / 60).toString().replace(".", ",") + " dk" : v.hedef_sure + " sn"}` : ""}</span></div>
+    <div>${zamanYazi(v)} · <span class="alt">${v.tur === "trend" ? "📈 güncel" : v.tur === "ozel" ? "⚡ senin isteğin" : v.tur === "hikaye" ? `📖 hikâye${v.kalip ? " · " + esc(bicimAdi("kalip", v.kalip)) : ""}${v.ton ? " · " + esc(bicimAdi("ton", v.ton)) : ""}${v.panel_istegi ? " · ⚡ senin isteğin" : ""}` : "🌿 evergreen"}${v.seri ? ` · 📺 ${esc(v.seri)}${v.seri_no ? " #" + esc(v.seri_no) : ""}` : ""}${(v.gorunum || (["bekliyor", "seslendirildi"].includes(v.durum) && vAyar("ANIMASYON_VARSAYILAN") ? "animasyon" : "")) === "animasyon" ? " · 🎬 animasyon" : ""}${v.hedef_sure ? ` · ⏱️ ${v.hedef_sure >= 60 ? (v.hedef_sure / 60).toString().replace(".", ",") + " dk" : v.hedef_sure + " sn"}` : ""}</span></div>
     <h3>${esc(v.baslik || v.konu)}</h3>
     <span class="rozet ${durumSinif}">${durumYazi}</span>
     ${v.youtube_guncelle ? `<span class="rozet">⏳ YouTube'a işleniyor</span>` : ""}
@@ -745,7 +779,7 @@ function yeniVideoModal() {
     const istek = {mod: "yeni", konu, sure: +$("#ySure").value, baslik: $("#yBaslik").value.trim(),
                    cumleler: $("#ySenaryo").value.split("\n").map(x => x.trim()).filter(Boolean),
                    once_izle: $("#yOnceIzle").checked, gorunum: gorunumDeger("yGorunum"),
-                   seri_secim: $("#ySeri").value, kalip: kalipDeger("yKalip"), video_notu: $("#yNot").value.trim()};
+                   seri_secim: $("#ySeri").value, ...bicimDegerleri("yKalip"), video_notu: $("#yNot").value.trim()};
     if ($("#yZamanTur").value === "saat") {
       const z = $("#yZaman").value;
       if (!z) return bildir("Saat seç.");
@@ -1038,7 +1072,16 @@ async function ayarlar() {
       <p class="ince">Otomatik hikâyeler bu sürede anlatılır (önerilen 45-50). ⚡ ile istediğin videoda süreyi ayrıca seçersin.</p>
       <label>📺 Hangi serilerden hikâye anlatılsın? <span class="ince">(hepsi işaretliyse hepsinden karışık; haftalık analiz de önerebilir)</span></label>
       <div class="satir" style="flex-wrap:wrap;gap:4px 12px">${SERI_HIKAYE.map(ad => `<label style="font-weight:normal;white-space:nowrap;margin:0"><input type="checkbox" data-hseri="${esc(ad)}" ${!(a.HIKAYE_SERI_ACIK || []).length || a.HIKAYE_SERI_ACIK.includes(ad) ? "checked" : ""} style="width:auto"> ${esc(ad)}</label>`).join("")}</div>
-      <p class="ince">Anlatım kalıbını (sondan başla, ters köşe…) sistem her hikâyeye göre kendi seçer, art arda aynı kalıp kullanmaz. Bir videoda kalıbı sen seçmek istersen ✏️ / ⚡ pencerelerinde seçebilirsin.</p>
+      <h4 style="margin-top:14px">🎨 Anlatım biçimleri</h4>
+      <p class="ince">Her hikâye için sistem bir <b>kalıp</b> (olay nasıl sıralansın), bir <b>ton</b> (duygusu) ve bir <b>kapanış</b> (ders nasıl verilsin) seçer;
+        art arda aynısını kullanmaz. İşaretli olanlardan seçer (hepsi işaretliyse hepsinden). Tarifleri değiştirebilir, kendi biçimini ekleyebilirsin.
+        Bir videoda kendin seçmek istersen ✏️ / ⚡ pencerelerinde seçebilirsin.</p>
+      <div id="bicimEditor"></div>
+      <label>📊 İzlenmelere göre ne kadar yön alsın?</label>
+      <select id="hOgrenme">${secenek(a.HIKAYE_OGRENME || "dengeli", [["dengeli", "Dengeli — iyi gidenleri öne alır, ~%30 yeni şeyler dener (önerilen)"],
+        ["agresif", "Agresif — neredeyse hep en iyi gideni seçer (çeşitlilik azalır)"], ["kapali", "Kapalı — istatistiğe bakmaz"]])}</select>
+      <p class="ince">Her kalıbın, tonun, kapanışın ve serinin izlenme / izlenme yüzdesi / paylaşım ortalaması her sabah hikâye seçimine verilir
+        (en az 3 hikâye videosu olunca başlar; 2 günden yeni videolar sayılmaz). Tablo: İstatistik sekmesi.</p>
     </div>
     <div id="bilimKonu">
     <label>📚 Kanalın konu alanları (her satır bir alan)</label>
@@ -1360,6 +1403,45 @@ async function ayarlar() {
     ["#hikayeAlan", "#sesHikaye", "#hikayeGoruntu", "#hikayeGorunumNot"].forEach(x => $(x).style.display = h ? "" : "none");
     ["#bilimKonu", "#bilimGoruntu", "#bilimStil", "#bilimSure"].forEach(x => $(x).style.display = h ? "none" : ""); };
   turCiz();
+  // 🎨 Anlatım biçimi düzenleyici (kalıp / ton / kapanış): işaretle, tarifini değiştir, kendi biçimini ekle
+  const bicim = {};
+  for (const [tur, [ayar, acikAd]] of Object.entries(BICIMLER))
+    bicim[tur] = {sozluk: {...(a[ayar] || VARSAYILAN_AYARLAR[ayar])}, acik: [...(a[acikAd] || [])]};
+  const bicimCiz = () => {
+    $("#bicimEditor").innerHTML = Object.entries(BICIMLER).map(([tur, [ayar, , , baslik]]) => {
+      const b = bicim[tur];
+      return `<details style="margin:6px 0"><summary><b>${baslik}</b> <span class="ince">(${Object.keys(b.sozluk).filter(k => !b.acik.length || b.acik.includes(k)).length}/${Object.keys(b.sozluk).length} açık)</span></summary>
+        ${Object.entries(b.sozluk).map(([k, t]) => `<div style="border-left:3px solid #8884;padding-left:8px;margin:8px 0">
+          <label style="font-weight:normal;margin:0"><input type="checkbox" style="width:auto" data-bacik="${tur}" value="${esc(k)}" ${!b.acik.length || b.acik.includes(k) ? "checked" : ""}> <b>${esc(bicimAdi(tur, k))}</b></label>
+          <textarea data-btarif="${tur}" data-k="${esc(k)}" style="min-height:44px">${esc(t)}</textarea>
+          ${(VARSAYILAN_AYARLAR[ayar] || {})[k] === undefined ? `<button type="button" data-bsil="${tur}" data-k="${esc(k)}">🗑️ Sil</button>` :
+            t !== VARSAYILAN_AYARLAR[ayar][k] ? `<button type="button" data-bsifirla="${tur}" data-k="${esc(k)}">↩️ İlk hâline döndür</button>` : ""}</div>`).join("")}
+        <div class="satir"><div><input data-byeniad="${tur}" placeholder="Yeni biçimin adı (ör. Mektup gibi)"></div>
+          <div><button type="button" data-byeni="${tur}">+ Ekle</button></div></div>
+        <textarea data-byenitarif="${tur}" placeholder="Nasıl olsun? (ör. Hikâye bir babanın oğluna yazdığı mektup gibi anlatılsın)" style="min-height:44px"></textarea></details>`;
+    }).join("");
+    const oku = () => {
+      for (const tur of Object.keys(BICIMLER)) {
+        const kodlar = Object.keys(bicim[tur].sozluk);
+        const isaretli = [...document.querySelectorAll(`[data-bacik="${tur}"]:checked`)].map(x => x.value);
+        bicim[tur].acik = isaretli.length === kodlar.length ? [] : isaretli;
+        document.querySelectorAll(`[data-btarif="${tur}"]`).forEach(x => bicim[tur].sozluk[x.dataset.k] = x.value.trim() || bicim[tur].sozluk[x.dataset.k]);
+      }
+    };
+    document.querySelectorAll("#bicimEditor input, #bicimEditor textarea").forEach(x => x.addEventListener("change", oku));
+    document.querySelectorAll("[data-bsil]").forEach(x => x.onclick = () => { oku(); const b = bicim[x.dataset.bsil];
+      delete b.sozluk[x.dataset.k]; b.acik = b.acik.filter(k => k !== x.dataset.k); bicimCiz(); });
+    document.querySelectorAll("[data-bsifirla]").forEach(x => x.onclick = () => { oku(); const t = x.dataset.bsifirla;
+      bicim[t].sozluk[x.dataset.k] = VARSAYILAN_AYARLAR[BICIMLER[t][0]][x.dataset.k]; bicimCiz(); });
+    document.querySelectorAll("[data-byeni]").forEach(x => x.onclick = () => { oku(); const t = x.dataset.byeni;
+      const ad = document.querySelector(`[data-byeniad="${t}"]`).value.trim().slice(0, 40);
+      const tarif = document.querySelector(`[data-byenitarif="${t}"]`).value.trim().slice(0, 300);
+      if (!ad || tarif.length < 10) return bildir("Ad ve en az birkaç kelimelik tarif yaz.");
+      if (bicim[t].sozluk[ad] !== undefined) return bildir("Bu adla zaten var.");
+      bicim[t].sozluk[ad] = tarif; if (bicim[t].acik.length) bicim[t].acik.push(ad); bicimCiz(); });
+    bicim._oku = oku;
+  };
+  bicimCiz();
   $("#kanalDegis").onclick = async e => {
     const hedef = e.target.dataset.hedef;
     if (!confirm(hedef === "bilim" ? "Bilim kanalına geri dönülsün mü? Hikâye ayarların saklanır, bilim ayarların geri gelir." :
@@ -1444,6 +1526,9 @@ async function ayarlar() {
       HIKAYE_SURE: Math.min(90, Math.max(35, +$("#hikayeSure").value || 45)),
       HIKAYE_SERI_ACIK: (() => { const l = [...document.querySelectorAll("[data-hseri]:checked")].map(x => x.dataset.hseri);
         return l.length === SERI_HIKAYE.length ? [] : l; })(),
+      ...(() => { bicim._oku(); const r = {HIKAYE_OGRENME: $("#hOgrenme").value};
+        for (const [tur, [ayar, acikAd]] of Object.entries(BICIMLER)) { r[ayar] = bicim[tur].sozluk; r[acikAd] = bicim[tur].acik; }
+        return r; })(),
       HIKAYE_SES_ID: $("#hSesId").value.trim(), HIKAYE_SES_DUYGU: $("#hSesDuygu").value === "" ? null : +$("#hSesDuygu").value, ANIMASYON_BILGI_ETIKETI: $("#animEtiket").checked, CLOUDFLARE_HESAP: $("#cfHesap").value.trim(), UYGUNLUK_KONTROLU: $("#uygunluk").value,
       OZEL_KONULAR: $("#ozelKonular").value.split("\n").map(x => x.trim()).filter(Boolean),
       MALIYET_PROFILI: $("#profil").value, BILGI_DOGRULAMA: ($("[data-gorev='dogrulama']") || {}).value !== "kapali", OTOMATIK_ONAY: $("#onayModu").value !== "elle",
@@ -1476,6 +1561,8 @@ async function ayarlar() {
     yeni.HOOK_SURE = sinirla(yeni.HOOK_SURE, 1, 6, VARSAYILAN_AYARLAR.HOOK_SURE);
     if (!yeni.KATEGORILER.length) return bildir("En az bir kategori olmalı.");
     if (yeni.KANAL_TURU === "hikaye" && !document.querySelector("[data-hseri]:checked")) return bildir("📺 En az bir hikâye serisi işaretli olmalı.");
+    for (const [tur, [, , , baslik]] of Object.entries(BICIMLER))
+      if (!document.querySelector(`[data-bacik="${tur}"]:checked`)) return bildir(`${baslik}: en az bir tane işaretli olmalı.`);
     if (yeni.HIKAYE_SES_ID && !/^[0-9a-zA-Z]{10,40}$/.test(yeni.HIKAYE_SES_ID)) return bildir("Masalcı ses kimliği sadece harf ve rakamdan oluşmalı.");
     if (Object.keys(STIL_TURLERI).some(t => !document.querySelector(`[data-stil="${t}"]:checked`)))
       return bildir("🎬 Görünüm kartında her stil türünden en az bir seçenek işaretli olmalı.", 5000);
@@ -1495,9 +1582,11 @@ async function ayarlar() {
         if (JSON.stringify(deger) !== JSON.stringify(a[k])) { sonuc[k] = deger; degisen++; }
         else if (!(k in sonuc)) sonuc[k] = deger;
       }
+      for (const [ayar] of Object.values(BICIMLER))      // varsayılanla aynıysa yazma (sonraki iyileştirmeler gelsin)
+        if (JSON.stringify(sonuc[ayar]) === JSON.stringify(VARSAYILAN_AYARLAR[ayar])) delete sonuc[ayar];
       if (!degisen) { bildir("Değişiklik yok."); $("#ayarKaydet").disabled = false; return; }
       await dosyaYaz("ayarlar.json", sonuc, "Panel: ayarlar güncellendi");
-      Object.assign(a, yeni);
+      Object.assign(a, yeni); AYAR_VID = {...AYAR_VID, ...yeni};
       bildir(`✅ Ayarlar kaydedildi (${degisen} değişiklik).`);
     }
     catch (e) { bildir("❌ " + e.message, 6000); }
@@ -1508,10 +1597,39 @@ async function ayarlar() {
 // ─────────────────────────────────────────
 //  İSTATİSTİK + MALİYET
 // ─────────────────────────────────────────
+// 📖 Hikâye performansı: hikaye.performans_tablosu() ile aynı hesap (izlenme 7 günlük karşılığa çevrilir)
+function hikayePerformansi(perf, plan) {
+  const p = {}; (plan || []).forEach(v => { if (v.youtube_id && v.tur === "hikaye") p[v.youtube_id] = v; });
+  const satir = [];
+  for (const v of (perf && perf.videolar) || []) {
+    const x = p[v.youtube_id]; if (!x) continue;
+    const yas = Math.round((new Date(perf.tarih) - new Date(v.yayin)) / 864e5);
+    if (!(yas >= 2)) continue;
+    satir.push({...x, izl: (v.izlenme || 0) * 7 / Math.min(Math.max(yas, 2), 7), yuzde: v.izlenme_yuzdesi, pay: v.paylasim || 0});
+  }
+  if (!satir.length) return hikayeKanali() ? `<div class="kart"><h3>📖 Hikâye performansı</h3><p class="alt">Henüz ölçülmüş hikâye videosu yok (videolar 2 günlük olunca sayılır).
+    En az 3 video olunca sistem bu tabloya göre seçim yapmaya başlar.</p></div>` : "";
+  const grup = (alan, ad) => {
+    const g = {}; satir.forEach(r => { if (r[alan]) (g[r[alan]] = g[r[alan]] || []).push(r); });
+    const l = Object.entries(g).map(([k, rs]) => [k, rs.length, rs.reduce((t, r) => t + r.izl, 0) / rs.length,
+      rs.filter(r => r.yuzde).reduce((t, r) => t + r.yuzde, 0) / Math.max(1, rs.filter(r => r.yuzde).length), rs.reduce((t, r) => t + r.pay, 0) / rs.length])
+      .sort((a, b) => b[2] - a[2]);
+    if (!l.length) return "";
+    const enIyi = l[0][2] || 1;
+    return `<h4 style="margin-top:12px">${ad}</h4>` + l.map(([k, n, izl, y, pay]) => `<div style="margin-top:6px"><div class="satir">
+      <span>${esc(alan === "seri" ? k : bicimAdi(alan, k))} <span class="ince">(${n} video)</span></span>
+      <span style="text-align:right">~${Math.round(izl)} izl/hafta · %${y.toFixed(0)} · ${pay.toFixed(1)} paylaşım</span></div>
+      <div class="cubuk"><i style="width:${100 * izl / enIyi}%"></i></div></div>`).join("");
+  };
+  return `<div class="kart"><h3>📖 Hikâye performansı</h3>
+    <p class="ince">${satir.length} hikâye videosu · izlenme 7 günlük karşılığa çevrildi · % = videonun ortalama ne kadarı izlendi.
+      ${satir.length < 3 ? "En az 3 video olunca sistem seçimlerde bu tabloyu kullanır." : `Sistem seçimlerde bunu kullanıyor (${{dengeli: "dengeli", agresif: "agresif", kapali: "kapalı"}[vAyar("HIKAYE_OGRENME")] || "dengeli"}).`}</p>
+    ${grup("kalip", "🧩 Anlatım kalıbı")}${grup("ton", "🎭 Ton")}${grup("kapanis", "🎬 Kapanış")}${grup("seri", "📺 Seri")}</div>`;
+}
 async function istatistik() {
   $("#ana").innerHTML = `<p class="alt">Yükleniyor…</p>`;
-  const [perf, maliyet, st] = await Promise.all([dosyaOku("performans.json", null), dosyaOku("maliyet.json", []),
-                                                 dosyaOku("strateji.json", null)]);
+  const [perf, maliyet, st, hPlan] = await Promise.all([dosyaOku("performans.json", null), dosyaOku("maliyet.json", []),
+                                                 dosyaOku("strateji.json", null), dosyaOku("haftalik_plan.json", [])]);
   const simdi = Date.now(), gun = 864e5;
   const toplam = g => (maliyet || []).filter(k => simdi - new Date(k.zaman) < g * gun).reduce((s, k) => s + k.usd, 0);
   const isler = {};
@@ -1533,6 +1651,7 @@ async function istatistik() {
         <p class="ince">Konu bulma ve haftalık analiz gibi ortak işler video başına sayılmaz (haftada ~0,05-0,10 $).</p>`;
     })()}
     <p class="ince">Gerçek fatura: Anthropic Console → Usage.</p></div>`;
+  html += hikayePerformansi(perf, hPlan);
   if (perf && perf.analytics && perf.analytics !== "var") {
     const neden = {
       api_kapali: `Google Cloud projesinde <b>YouTube Analytics API</b> açık değil. <a href="https://console.cloud.google.com/apis/library/youtubeanalytics.googleapis.com" target="_blank">Bu sayfayı aç</a> → doğru projeyi seç → <b>Enable / Etkinleştir</b>. Bir kere yapman yeter.`,
@@ -1693,11 +1812,13 @@ const STIL_TURLERI = {
 const stilAdi = (tur, k) => ((STIL_TURLERI[tur] || [, []])[1].find(x => x[0] === k) || [, k])[1];
 const ONERI_ADLARI = {STIL_TERCIHLERI: "🎬 Görsel stil", KARARTMA: "🌑 Görüntü karartma",KONU_NOTU: "📝 Konu talimatı", SENARYO_NOTU: "✍️ Senaryo talimatı", GORSEL_NOTU: "🎨 Görsel talimatı", ANIMASYON_STILI: "🎬 Animasyon çizim stili",
   KATEGORILER: "📚 Konu alanları", OZEL_KONULAR: "🎯 Belirli konular", TREND_GUNLERI: "📰 Güncel haber günleri",
-  GUNLUK_SURE: "⏱️ Günlük video süresi", HIKAYE_SURE: "⏱️ Hikâye süresi", HIKAYE_STILI: "🪟 Hikâye çizim stili", HIKAYE_SERI_ACIK: "📺 Açık hikâye serileri", YAYINLANMA_SAATLERI: "🕐 Yayın saatleri", UYGUNLUK_KONTROLU: "🔍 Görüntü uygunluk kontrolü"};
+  GUNLUK_SURE: "⏱️ Günlük video süresi", HIKAYE_SURE: "⏱️ Hikâye süresi", HIKAYE_STILI: "🪟 Hikâye çizim stili", HIKAYE_SERI_ACIK: "📺 Açık hikâye serileri", HIKAYE_KALIP_ACIK: "🧩 Açık anlatım kalıpları", HIKAYE_TON_ACIK: "🎭 Açık tonlar", HIKAYE_KAPANIS_ACIK: "🎬 Açık kapanışlar", YAYINLANMA_SAATLERI: "🕐 Yayın saatleri", UYGUNLUK_KONTROLU: "🔍 Görüntü uygunluk kontrolü"};
 const oneriDeger = (alan, d) => alan === "STIL_TERCIHLERI" ? (d && d.tur ? `${STIL_TURLERI[d.tur][0]}: sadece ${d.secenekler.map(k => stilAdi(d.tur, k)).join(", ")}`
     : Object.entries(d || {}).filter(([, v]) => (v || []).length).map(([t, v]) => `${STIL_TURLERI[t][0]}: ${v.map(k => stilAdi(t, k)).join(", ")}`).join(" · ") || "hepsi karışık") :
   alan === "KARARTMA" ? `%${Math.round(+d * 100)}` : alan === "TREND_GUNLERI" ? (d.length ? d.map(i => GUN_ADLARI[i]).join(", ") : "hiç") :
-  alan === "HIKAYE_SERI_ACIK" ? (d.length ? d.join(", ") : "hepsi") : ["GUNLUK_SURE", "HIKAYE_SURE"].includes(alan) ? (d >= 60 ? (d / 60 + " dk").replace(".", ",") : d + " sn") : Array.isArray(d) ? d.join(", ") : String(d);
+  alan === "HIKAYE_SERI_ACIK" ? (d.length ? d.join(", ") : "hepsi") :
+  alan === "HIKAYE_KALIP_ACIK" || alan === "HIKAYE_TON_ACIK" || alan === "HIKAYE_KAPANIS_ACIK" ?
+    (d.length ? d.map(k => bicimAdi({HIKAYE_KALIP_ACIK: "kalip", HIKAYE_TON_ACIK: "ton", HIKAYE_KAPANIS_ACIK: "kapanis"}[alan], k)).join(", ") : "hepsi") : ["GUNLUK_SURE", "HIKAYE_SURE"].includes(alan) ? (d >= 60 ? (d / 60 + " dk").replace(".", ",") : d + " sn") : Array.isArray(d) ? d.join(", ") : String(d);
 function oneriUygula(ayar, o) {
   const liste = ["KATEGORILER", "OZEL_KONULAR"].includes(o.alan);
   if (o.islem === "ekle") {
