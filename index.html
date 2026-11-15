@@ -104,7 +104,7 @@ const VARSAYILAN_AYARLAR = {
   TTS_SES: "tr-TR-AhmetNeural", TTS_HIZ: "+10%", SES_MOTORU: "edge", ELEVENLABS_SES: "75SIZa3vvET95PHhf1yD", KARARTMA: 0.35, VIDEO_KLIP_ONCELIKLI: true,
   ALTYAZI_BOYUT: 96, ALTYAZI_KELIME: 3, HOOK_SURE: 2.8, HOOK_BOYUT: 100,
   GORSEL_CESITLILIK: true, SERI_ETIKETI: true, FON_MUZIGI: true, MUZIK_SESI: 0.16, OTOMATIK_YORUM: true,
-  IZIN_SURESIZ: false, ONERI_KARARLARI: {}, URETIM_DURAKLAT: false, GUNLUK_SURE: 30, AYLIK_BUTCE: 0, BUTCE_DAVRANIS: "ucuz", KONU_NOTU: "", SENARYO_NOTU: "", GORSEL_NOTU: "", CLOUDFLARE_HESAP: "", UYGUNLUK_KONTROLU: "kapali", OZEL_KONULAR: [], YUKLEME_ONCEDEN_SAAT: 30, URETIM_RITMI: "gunluk", TALEP_KONTROLU: true, STIL_TERCIHLERI: {}, ANIMASYON_STILI: "Modern bilim anlatım animasyonu gibi temiz, stilize 3D görüntü; içini gösteren kesit görünüm; yumuşak stüdyo ışığı; koyu lacivert arka plan; sıcak turuncu vurgular; mat ve pürüzsüz yüzeyler; yüksek detay; konu ortada", ANIMASYON_VARSAYILAN: false, KANAL_TURU: "bilim", HIKAYE_STILI: "Bütün resim küçük düzensiz cam taşlarından oluşan mozaik vitray; ince koyu derz çizgileri; düz 2D çizim; sıcak toprak kahvesi, altın ve bej tonlar; sade, iri hatlı karakterler; dikey tek odak; fotoğraf değil; yazı, harf, dini sembol, haç, hale, melek yok", HIKAYE_SURE: 45, HIKAYE_SERI_ACIK: [], HIKAYE_OGRENME: "dengeli", HIKAYE_CIZIM_MODELI: "@cf/black-forest-labs/flux-2-klein-4b", HIKAYE_KONTROL_ESIK: 7, HIKAYE_YENIDEN_CIZIM: 2, HIKAYE_YENIDEN_BUTCE: 10, HIKAYE_KALITE_YEDEK: true, HIKAYE_KALIP_ACIK: [], HIKAYE_TON_ACIK: [], HIKAYE_KAPANIS_ACIK: [],
+  IZIN_SURESIZ: false, ONERI_KARARLARI: {}, URETIM_DURAKLAT: false, GUNLUK_SURE: 30, AYLIK_BUTCE: 0, BUTCE_DAVRANIS: "ucuz", KONU_NOTU: "", SENARYO_NOTU: "", GORSEL_NOTU: "", CLOUDFLARE_HESAP: "", CLOUDFLARE_HESAP_2: "", CLOUDFLARE_AKTIF: 1, UYGUNLUK_KONTROLU: "kapali", OZEL_KONULAR: [], YUKLEME_ONCEDEN_SAAT: 30, URETIM_RITMI: "gunluk", TALEP_KONTROLU: true, STIL_TERCIHLERI: {}, ANIMASYON_STILI: "Modern bilim anlatım animasyonu gibi temiz, stilize 3D görüntü; içini gösteren kesit görünüm; yumuşak stüdyo ışığı; koyu lacivert arka plan; sıcak turuncu vurgular; mat ve pürüzsüz yüzeyler; yüksek detay; konu ortada", ANIMASYON_VARSAYILAN: false, KANAL_TURU: "bilim", HIKAYE_STILI: "Bütün resim küçük düzensiz cam taşlarından oluşan mozaik vitray; ince koyu derz çizgileri; düz 2D çizim; sıcak toprak kahvesi, altın ve bej tonlar; sade, iri hatlı karakterler; dikey tek odak; fotoğraf değil; yazı, harf, dini sembol, haç, hale, melek yok", HIKAYE_SURE: 45, HIKAYE_SERI_ACIK: [], HIKAYE_OGRENME: "dengeli", HIKAYE_CIZIM_MODELI: "@cf/black-forest-labs/flux-2-klein-4b", HIKAYE_KONTROL_ESIK: 7, HIKAYE_YENIDEN_CIZIM: 2, HIKAYE_YENIDEN_BUTCE: 10, HIKAYE_KALITE_YEDEK: true, HIKAYE_KALIP_ACIK: [], HIKAYE_TON_ACIK: [], HIKAYE_KAPANIS_ACIK: [],
   HIKAYE_KALIPLARI: {celiski: "Çelişkili açılış → geçmişe dönüş → mücadele / vazgeçiş → ders izleyiciye bağlanır",
     sondan: "Sonucu göster → başa dön → hatanın anı → tek cümlelik hikmet",
     iki_kez: "Aynı durumun iki karşılaşması → değişen tek şey → ikinci karşılaşma → ders sahnenin içinden",
@@ -544,7 +544,7 @@ const hikayeOzelDeger = p => $("#" + p + "SesId") ? {ses_id: $("#" + p + "SesId"
 const gunlukSureAl = () => hikayeKanali() ? (vAyar("HIKAYE_SURE") || 45) : (vAyar("GUNLUK_SURE") || 30);
 // 🔁 Kanal profili değiştir: şu anki ayarlar kanal_profilleri/<tür>.json'a saklanır, hedef kanalın saklı ayarları geri gelir.
 // Bağlantı / maliyet ayarları iki kanalda ortak kalır.
-const ORTAK_AYARLAR = ["CLOUDFLARE_HESAP", "EK_SAGLAYICILAR", "GOREV_MODELLERI", "MALIYET_SIFIR", "AYLIK_BUTCE", "BUTCE_DAVRANIS",
+const ORTAK_AYARLAR = ["CLOUDFLARE_HESAP", "CLOUDFLARE_HESAP_2", "CLOUDFLARE_AKTIF", "EK_SAGLAYICILAR", "GOREV_MODELLERI", "MALIYET_SIFIR", "AYLIK_BUTCE", "BUTCE_DAVRANIS",
   "IZIN_SURESIZ", "ONERI_KARARLARI", "MALIYET_PROFILI", "URETIM_DURAKLAT"];
 async function kanalDegistir(hedef) {
   const simdiki = await dosyaOku("ayarlar.json", {});
@@ -1270,10 +1270,16 @@ async function ayarlar() {
     <p class="ince">Anahtarı yapıştır → 🔒 Kaydet. Buradan eklenen anahtar GitHub secret'ının önüne geçer; kaldırırsan varsa GitHub secret'ı kullanılır.</p>
     <div id="anahtarlar"><p class="alt">Yükleniyor…</p></div>
     <div id="cfAlan">
-      <h4>☁️ Cloudflare hesap numarası (Account ID)</h4>
+      <h4>☁️ Cloudflare hesapları</h4>
+      <label>Şu an kullanılan hesap</label>
+      <select id="cfAktif">${secenek(String(a.CLOUDFLARE_AKTIF || 1), [["1", "1. hesap"], ["2", "2. hesap"]])}</select>
+      <p class="ince">Sistem aynı anda sadece seçili hesabı kullanır. Bir hesap kilitlenirse buradan diğerine geç → 💾 Kaydet.</p>
+      <label>1. hesap numarası (Account ID)</label>
       <input id="cfHesap" autocomplete="off" placeholder="32 haneli harf/rakam" value="${esc(a.CLOUDFLARE_HESAP || "")}">
+      <label>2. hesap numarası (Account ID)</label>
+      <input id="cfHesap2" autocomplete="off" placeholder="32 haneli harf/rakam" value="${esc(a.CLOUDFLARE_HESAP_2 || "")}">
       <p class="ince">Cloudflare → Workers AI → <b>Use REST API</b> sayfasındaki <b>Account ID</b> (ya da tarayıcı adresinde dash.cloudflare.com/ sonrasındaki 32 karakter).
-        Anahtarını yukarıda <b>Cloudflare</b> satırına gir.</p>
+        Her hesabın anahtarını yukarıda kendi satırına gir ("Cloudflare · 1. hesap" / "· 2. hesap").</p>
     </div>
     <details style="margin-top:12px"><summary><b>➕ Ek yapay zekâ sağlayıcıları</b> <span class="alt">(DeepSeek, Gemini, OpenRouter, Groq…)</span></summary>
       <ol class="alt">
@@ -1514,7 +1520,7 @@ async function ayarlar() {
     if (!d.kurulu) { $("#anahtarlar").innerHTML = `<div class="uyari">Kasa henüz kurulmadı. <b>İşler → 🔑 Anahtar testi</b>'ni bir kez çalıştır (1-2 dk), sonra bu sayfayı yenile.</div>`; return; }
     const saglayiciAdi = no => ((a.EK_SAGLAYICILAR || []).find(x => +x.yuva === no) || {}).ad;
     const satirlar = [["CLAUDE_API_KEY", "Claude (Anthropic)"], ["ELEVENLABS_API_KEY", "ElevenLabs"], ["PEXELS_API_KEY", "Pexels"],
-      ["PIXABAY_API_KEY", "Pixabay"], ["CLOUDFLARE_API_KEY", "Cloudflare (görsel)"], ["GEMINI_API_KEY", "Google Gemini (yedek çizici)"], ...[1, 2, 3].map(n => [`EK_API_KEY_${n}`, `Sağlayıcı ${n}${saglayiciAdi(n) ? " · " + saglayiciAdi(n) : ""}`])];
+      ["PIXABAY_API_KEY", "Pixabay"], ["CLOUDFLARE_API_KEY", "Cloudflare (görsel) · 1. hesap"], ["CLOUDFLARE_API_KEY_2", "Cloudflare (görsel) · 2. hesap"], ["GEMINI_API_KEY", "Google Gemini (yedek çizici)"], ...[1, 2, 3].map(n => [`EK_API_KEY_${n}`, `Sağlayıcı ${n}${saglayiciAdi(n) ? " · " + saglayiciAdi(n) : ""}`])];
     $("#anahtarlar").innerHTML = satirlar.map(([ad, etiket]) => {
       const var_ = d.adlar.includes(ad);
       return `<div style="margin:10px 0"><div><b>${esc(etiket)}</b> <span class="rozet ${var_ ? "onay" : ""}">${var_ ? "✅ panelden eklendi" : "GitHub secret'ı (varsa)"}</span></div>
@@ -1584,7 +1590,7 @@ async function ayarlar() {
       ...(() => { bicim._oku(); const r = {HIKAYE_OGRENME: $("#hOgrenme").value};
         for (const [tur, [ayar, acikAd]] of Object.entries(BICIMLER)) { r[ayar] = bicim[tur].sozluk; r[acikAd] = bicim[tur].acik; }
         return r; })(),
-      HIKAYE_SES_ID: $("#hSesId").value.trim(), HIKAYE_SES_DUYGU: $("#hSesDuygu").value === "" ? null : +$("#hSesDuygu").value, ANIMASYON_BILGI_ETIKETI: $("#animEtiket").checked, CLOUDFLARE_HESAP: $("#cfHesap").value.trim(), UYGUNLUK_KONTROLU: $("#uygunluk").value,
+      HIKAYE_SES_ID: $("#hSesId").value.trim(), HIKAYE_SES_DUYGU: $("#hSesDuygu").value === "" ? null : +$("#hSesDuygu").value, ANIMASYON_BILGI_ETIKETI: $("#animEtiket").checked, CLOUDFLARE_HESAP: $("#cfHesap").value.trim(), CLOUDFLARE_HESAP_2: $("#cfHesap2").value.trim(), CLOUDFLARE_AKTIF: +$("#cfAktif").value, UYGUNLUK_KONTROLU: $("#uygunluk").value,
       OZEL_KONULAR: $("#ozelKonular").value.split("\n").map(x => x.trim()).filter(Boolean),
       MALIYET_PROFILI: $("#profil").value, BILGI_DOGRULAMA: ($("[data-gorev='dogrulama']") || {}).value !== "kapali", OTOMATIK_ONAY: $("#onayModu").value !== "elle",
       ONAY_MODU: $("#onayModu").value,
@@ -1624,7 +1630,9 @@ async function ayarlar() {
     if (Object.keys(STIL_TURLERI).some(t => !document.querySelector(`[data-stil="${t}"]:checked`)))
       return bildir("🎬 Görünüm kartında her stil türünden en az bir seçenek işaretli olmalı.", 5000);
     if (!yeni.GORSEL_KAYNAKLARI.length) return bildir("🖼️ Görüntüler kartında en az bir kaynağı işaretle.");
-    if (yeni.CLOUDFLARE_HESAP && !/^[0-9a-zA-Z]{16,64}$/.test(yeni.CLOUDFLARE_HESAP)) return bildir("Cloudflare hesap numarası sadece harf ve rakamdan oluşmalı (32 hane).", 5000);
+    for (const h of [yeni.CLOUDFLARE_HESAP, yeni.CLOUDFLARE_HESAP_2])
+      if (h && !/^[0-9a-zA-Z]{16,64}$/.test(h)) return bildir("Cloudflare hesap numarası sadece harf ve rakamdan oluşmalı (32 hane).", 5000);
+    if (yeni.CLOUDFLARE_AKTIF === 2 && !yeni.CLOUDFLARE_HESAP_2) return bildir("2. hesabı seçtin ama 2. hesap numarası boş.", 5000);
     if (yeni.GORSEL_KAYNAKLARI.some(k => k.startsWith("ai:cloudflare:")) && !yeni.CLOUDFLARE_HESAP)
       return bildir("Cloudflare için hesap numarasını (Account ID) gir.", 5000);
     if (yeni.SES_MOTORU === "ek" && !yeni.SES_EK_MODEL) return bildir("Ek sağlayıcı sesi için model seç.", 5000);
