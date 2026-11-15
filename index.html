@@ -104,7 +104,7 @@ const VARSAYILAN_AYARLAR = {
   TTS_SES: "tr-TR-AhmetNeural", TTS_HIZ: "+10%", SES_MOTORU: "edge", ELEVENLABS_SES: "75SIZa3vvET95PHhf1yD", KARARTMA: 0.35, VIDEO_KLIP_ONCELIKLI: true,
   ALTYAZI_BOYUT: 96, ALTYAZI_KELIME: 3, HOOK_SURE: 2.8, HOOK_BOYUT: 100,
   GORSEL_CESITLILIK: true, SERI_ETIKETI: true, FON_MUZIGI: true, MUZIK_SESI: 0.16, OTOMATIK_YORUM: true,
-  IZIN_SURESIZ: false, ONERI_KARARLARI: {}, URETIM_DURAKLAT: false, GUNLUK_SURE: 30, AYLIK_BUTCE: 0, BUTCE_DAVRANIS: "ucuz", KONU_NOTU: "", SENARYO_NOTU: "", GORSEL_NOTU: "", CLOUDFLARE_HESAP: "", UYGUNLUK_KONTROLU: "kapali", OZEL_KONULAR: [], YUKLEME_ONCEDEN_SAAT: 30, URETIM_RITMI: "gunluk", TALEP_KONTROLU: true, STIL_TERCIHLERI: {}, ANIMASYON_STILI: "Modern bilim anlatım animasyonu gibi temiz, stilize 3D görüntü; içini gösteren kesit görünüm; yumuşak stüdyo ışığı; koyu lacivert arka plan; sıcak turuncu vurgular; mat ve pürüzsüz yüzeyler; yüksek detay; konu ortada", ANIMASYON_VARSAYILAN: false, KANAL_TURU: "bilim", HIKAYE_STILI: "Bütün resim küçük düzensiz cam taşlarından oluşan mozaik vitray; ince koyu derz çizgileri; düz 2D çizim; sıcak toprak kahvesi, altın ve bej tonlar; sade, iri hatlı karakterler; dikey tek odak; fotoğraf değil; yazı, harf, dini sembol, haç, hale, melek yok", HIKAYE_SURE: 45, HIKAYE_SERI_ACIK: [], HIKAYE_OGRENME: "dengeli", HIKAYE_KALIP_ACIK: [], HIKAYE_TON_ACIK: [], HIKAYE_KAPANIS_ACIK: [],
+  IZIN_SURESIZ: false, ONERI_KARARLARI: {}, URETIM_DURAKLAT: false, GUNLUK_SURE: 30, AYLIK_BUTCE: 0, BUTCE_DAVRANIS: "ucuz", KONU_NOTU: "", SENARYO_NOTU: "", GORSEL_NOTU: "", CLOUDFLARE_HESAP: "", UYGUNLUK_KONTROLU: "kapali", OZEL_KONULAR: [], YUKLEME_ONCEDEN_SAAT: 30, URETIM_RITMI: "gunluk", TALEP_KONTROLU: true, STIL_TERCIHLERI: {}, ANIMASYON_STILI: "Modern bilim anlatım animasyonu gibi temiz, stilize 3D görüntü; içini gösteren kesit görünüm; yumuşak stüdyo ışığı; koyu lacivert arka plan; sıcak turuncu vurgular; mat ve pürüzsüz yüzeyler; yüksek detay; konu ortada", ANIMASYON_VARSAYILAN: false, KANAL_TURU: "bilim", HIKAYE_STILI: "Bütün resim küçük düzensiz cam taşlarından oluşan mozaik vitray; ince koyu derz çizgileri; düz 2D çizim; sıcak toprak kahvesi, altın ve bej tonlar; sade, iri hatlı karakterler; dikey tek odak; fotoğraf değil; yazı, harf, dini sembol, haç, hale, melek yok", HIKAYE_SURE: 45, HIKAYE_SERI_ACIK: [], HIKAYE_OGRENME: "dengeli", HIKAYE_CIZIM_MODELI: "@cf/black-forest-labs/flux-2-klein-4b", HIKAYE_KALIP_ACIK: [], HIKAYE_TON_ACIK: [], HIKAYE_KAPANIS_ACIK: [],
   HIKAYE_KALIPLARI: {celiski: "Çelişkili açılış → geçmişe dönüş → mücadele / vazgeçiş → ders izleyiciye bağlanır",
     sondan: "Sonucu göster → başa dön → hatanın anı → tek cümlelik hikmet",
     iki_kez: "Aynı durumun iki karşılaşması → değişen tek şey → ikinci karşılaşma → ders sahnenin içinden",
@@ -1173,6 +1173,12 @@ async function ayarlar() {
       <p class="alt">📖 Hikâye sahneleri yapay zekâyla (Cloudflare FLUX.2, dikey 9:16) bu stilde çizilir; her karakter için önce bir referans resim çizilir, bütün sahnelerde aynı görünsün diye.</p>
       <label>🪟 Çizim stili <span class="ince">(Türkçe yaz; çizime giderken İngilizceye çevrilir)</span></label>
       <textarea id="hikayeStil" style="min-height:90px">${esc(a.HIKAYE_STILI || "")}</textarea>
+      <label>🖌️ Çizim modeli</label>
+      <select id="hikayeModel">${secenek(a.HIKAYE_CIZIM_MODELI || VARSAYILAN_AYARLAR.HIKAYE_CIZIM_MODELI, [
+        ["@cf/black-forest-labs/flux-2-klein-4b", "FLUX.2 klein 4B — ucuz (ücretsiz kotayla günde ~55 çizim ≈ 2-3 video) · önerilen"],
+        ["@cf/black-forest-labs/flux-2-klein-9b", "FLUX.2 klein 9B — daha detaylı, pahalı (ücretsizle günde ~7 çizim, video yetmez)"],
+        ["@cf/black-forest-labs/flux-2-dev", "FLUX.2 dev — en ağır, en yavaş"]])}</select>
+      <p class="ince">Seçtiğin model önce denenir; hata verirse diğerleri yedek olarak kullanılır. Bir hikâye videosu ~15-20 çizim ister.</p>
       <p class="ince">Cloudflare hesap numarası ve anahtarı 🔌 Bağlantılar kartında. Ücretsiz kota günde ~24 çizim (video başına ~15).</p>
     </div>
     <div id="bilimGoruntu">
@@ -1561,7 +1567,7 @@ async function ayarlar() {
       YUKLEME_ONCEDEN_SAAT: +$("#onceden").value, URETIM_RITMI: $("#ritim").value,
       KATEGORILER: $("#kategoriler").value.split("\n").map(x => x.trim()).filter(Boolean),
       KONU_NOTU: $("#konuNotu").value.trim(), TALEP_KONTROLU: $("#talep").checked, SENARYO_NOTU: $("#senaryoNotu").value.trim(), GORSEL_NOTU: $("#gorselNotu").value.trim(), ANIMASYON_STILI: $("#animStil").value.trim() || VARSAYILAN_AYARLAR.ANIMASYON_STILI, ANIMASYON_VARSAYILAN: $("#animVarsayilan").checked,
-      KANAL_TURU: $("#kanalTuru").value, HIKAYE_STILI: $("#hikayeStil").value.trim() || VARSAYILAN_AYARLAR.HIKAYE_STILI,
+      KANAL_TURU: $("#kanalTuru").value, HIKAYE_STILI: $("#hikayeStil").value.trim() || VARSAYILAN_AYARLAR.HIKAYE_STILI, HIKAYE_CIZIM_MODELI: $("#hikayeModel").value,
       HIKAYE_SURE: Math.min(90, Math.max(35, +$("#hikayeSure").value || 45)),
       HIKAYE_SERI_ACIK: (() => { const l = [...document.querySelectorAll("[data-hseri]:checked")].map(x => x.dataset.hseri);
         return l.length === SERI_HIKAYE.length ? [] : l; })(),
