@@ -466,6 +466,46 @@ function siradakiSatirlar() {
   }
   return satirlar.sort((a, b) => a.zaman - b.zaman);
 }
+// ☁️ Cloudflare günlük çizim kotası (cizim_kotasi.py → cizim_kotasi.json; bugünkü sayım ayrıca maliyet.json'dan canlı)
+function kotaKarti(kota, maliyet) {
+  const simdi = new Date();
+  const yenilenme = new Date(Date.UTC(simdi.getUTCFullYear(), simdi.getUTCMonth(), simdi.getUTCDate() + 1));
+  const gunBasi = new Date(yenilenme - 864e5);
+  const kalanDk = Math.round((yenilenme - simdi) / 6e4);
+  const aktif = String(vAyar("CLOUDFLARE_AKTIF") || (kota && kota.aktif) || 1);
+  const bugun = {"1": {c: 0, m: {}, bitti: null}, "2": {c: 0, m: {}, bitti: null}};
+  for (const k of (Array.isArray(maliyet) ? maliyet : [])) {
+    const z = new Date(k.zaman), h = String(k.hesap || "");
+    if (!(z >= gunBasi) || !bugun[h]) continue;
+    if (k.is === "ai_gorsel" && String(k.model || "").startsWith("cloudflare/")) {
+      bugun[h].c++; const m = String(k.model).split("/").pop(); bugun[h].m[m] = (bugun[h].m[m] || 0) + 1;
+    } else if (k.is === "cizim_kota_bitti") bugun[h].bitti = z;
+  }
+  const satir = no => {
+    const b = bugun[no], o = kota && kota.hesaplar && kota.hesaplar[no];
+    const olcumBugun = kota && new Date(kota.zaman) >= gunBasi;
+    let cf = "";
+    if (o && o.noron != null && olcumBugun) {
+      const yuzde = Math.min(100, Math.round(100 * o.noron / (kota.gunluk_noron || 10000)));
+      cf = `<div class="satir"><span>Cloudflare'in ölçümü</span><span>${o.noron.toLocaleString("tr-TR")} / ${(kota.gunluk_noron || 10000).toLocaleString("tr-TR")} nöron · <b>%${100 - yuzde} kaldı</b></span></div>
+        <div class="cubuk"><i style="width:${yuzde}%;${yuzde >= 85 ? "background:#d9534f" : ""}"></i></div>`;
+    } else if (o && o.hata && o.hata.startsWith("izin_yok")) {
+      cf = `<div class="ince">Cloudflare'in kendi ölçümü okunamadı: anahtara <b>Account Analytics → Read</b> izni eklenirse kalan miktar burada görünür.</div>`;
+    } else if (o && o.hata) {
+      cf = `<div class="ince">Cloudflare ölçümü okunamadı (${esc(o.hata.slice(0, 90))}).</div>`;
+    }
+    const modeller = Object.entries(b.m).map(([m, n]) => `${m.replace("flux-2-", "")}: ${n}`).join(", ");
+    return `<div style="margin-top:8px"><b>${no === aktif ? "▶️ " : ""}${no}. hesap</b>${no === aktif ? ' <span class="ince">(şu an kullanılan)</span>' : ""}
+      <div class="satir"><span>Bugün yapılan çizim</span><span>${b.c}${modeller ? ` <span class="ince">(${esc(modeller)})</span>` : ""}</span></div>
+      ${b.bitti ? `<div class="satir"><span>⛔ Kota bitti</span><span>${zamanKisa(b.bitti)}</span></div>` : ""}${cf}</div>`;
+  };
+  const hesaplar = ["1", "2"].filter(no => no === aktif || bugun[no].c || (kota && kota.hesaplar && kota.hesaplar[no] && kota.hesaplar[no].tanimli));
+  return `<div class="kart"><b>☁️ Çizim kotası (Cloudflare, ücretsiz)</b>
+    <div class="satir" style="margin-top:4px"><span>🔄 Yenilenme</span><span><b>${zamanKisa(yenilenme)}</b> · ${Math.floor(kalanDk / 60)} sa ${kalanDk % 60} dk sonra</span></div>
+    ${hesaplar.map(satir).join("")}
+    <p class="ince" style="margin-top:6px">Günlük ücretsiz kota 10.000 nöron; her gün TR 03:00'te (00:00 UTC) sıfırlanır. Bir video ~20-40 çizim yapar.
+      ${kota ? `Cloudflare ölçümü: ${esc(String(kota.zaman).slice(11, 16))} (üretim / yükleme işleri çalıştıkça güncellenir).` : "Cloudflare ölçümü ilk iş çalışınca gelir."}</p></div>`;
+}
 function siradakiAlan() {
   const satirlar = siradakiSatirlar();
   const gunluk = vAyar("URETIM_RITMI") === "gunluk", mod = vAyar("ONAY_MODU"), once = +vAyar("YUKLEME_ONCEDEN_SAAT");
@@ -640,8 +680,9 @@ function konuModal(id, zamanIso) {
 async function videolar() {
   $("#ana").innerHTML = `<p class="alt">Yükleniyor…</p>`;
   let maliyet;
-  [PLAN, BEKLEYEN, YORUMLAR, maliyet, AYAR_VID] = await Promise.all([dosyaOku("haftalik_plan.json", []), bekleyenIstekler(),
-    dosyaOku("yorumlar.json", {}), dosyaOku("maliyet.json", []), dosyaOku("ayarlar.json", {})]);
+  let kota;
+  [PLAN, BEKLEYEN, YORUMLAR, maliyet, AYAR_VID, kota] = await Promise.all([dosyaOku("haftalik_plan.json", []), bekleyenIstekler(),
+    dosyaOku("yorumlar.json", {}), dosyaOku("maliyet.json", []), dosyaOku("ayarlar.json", {}), dosyaOku("cizim_kotasi.json", null)]);
   VIDEO_MALIYET = {};
   for (const k of (Array.isArray(maliyet) ? maliyet : [])) {
     if (!k.video) continue;
@@ -666,6 +707,7 @@ async function videolar() {
         `<button data-filtre="${k}" class="${VIDEO_FILTRE === k ? "aktif ana" : ""}">${ad}</button>`).join("")}
       <button id="yenile">↻</button><button id="uretBaslat">▶️ Üretimi başlat</button>
       <button id="yeniVideo" class="ana">⚡ Yeni video yaptır</button></nav>`;
+  if (hikayeKanali()) html += kotaKarti(kota, maliyet);
   html += siradakiAlan();
   const yeniBekleyen = BEKLEYEN.filter(i => i.mod === "yeni");
   if (yeniBekleyen.length) html += `<div class="kart"><b>⚡ Hazırlanan yeni videoların</b>${yeniBekleyen.map(i =>
