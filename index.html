@@ -1815,7 +1815,11 @@ function cizimOgrenmesi(rehber, plan) {
       sahne tarifleri bu kurallarla yazılır. Videolar geçtikçe "ilk deneme" puanının yükselmesi gerekir (az yeniden çizim = kota tasarrufu).</p>
     ${satirlar}
     ${rehber && rehber.kurallar ? `<h4 style="margin-top:12px">📘 Öğrenilen kurallar <span class="ince">(${esc(rehber.zaman || "")}, ${rehber.video_sayisi || 0} videodan)</span></h4>
-      <ul class="ince" style="margin:4px 0 0 18px">${rehber.kurallar.map(k => `<li>${esc(k)}</li>`).join("")}</ul>` : ""}</div>`;
+      <ul class="ince" style="margin:4px 0 0 18px">${rehber.kurallar.map(k => `<li>${esc(k)}</li>`).join("")}</ul>` : ""}
+    ${rehber && (rehber.uyarilar || []).length ? `<h4 style="margin-top:12px">🧠 Tekrarlayan hatalara karşı çizime verilen uyarılar</h4>
+      <p class="ince">Birden çok sahnede tekrarlayan hatalar her çizimin talimatına "bundan kaçın" diye eklenir. Ayrıca aynı videoda
+        bir sahne zayıf çıkarsa, sorunu sonraki sahnelere hemen baştan söylenir.</p>
+      <ul class="ince" style="margin:4px 0 0 18px">${rehber.uyarilar.map(k => `<li>${esc(k)}</li>`).join("")}</ul>` : ""}</div>`;
 }
 async function istatistik() {
   $("#ana").innerHTML = `<p class="alt">Yükleniyor…</p>`;
