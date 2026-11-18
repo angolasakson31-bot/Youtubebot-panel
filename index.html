@@ -1373,7 +1373,7 @@ async function ayarlar() {
       <h4>☁️ Cloudflare hesapları</h4>
       <label>Şu an kullanılan hesap</label>
       <select id="cfAktif">${secenek(String(a.CLOUDFLARE_AKTIF || 1), [["1", "1. hesap"], ["2", "2. hesap"]])}</select>
-      <p class="ince">Sistem aynı anda sadece seçili hesabı kullanır. Bir hesap kilitlenirse buradan diğerine geç → 💾 Kaydet.</p>
+      <p class="ince">Sistem önce seçili hesabı kullanır; o hesabın günlük çizim kotası biterse aynı video için kendiliğinden diğer hesaba geçer (iki hesap da tanımlıysa). Bir hesap kilitlenirse buradan diğerini seç → 💾 Kaydet.</p>
       <label>1. hesap numarası (Account ID)</label>
       <input id="cfHesap" autocomplete="off" placeholder="32 haneli harf/rakam" value="${esc(a.CLOUDFLARE_HESAP || "")}">
       <label>2. hesap numarası (Account ID)</label>
