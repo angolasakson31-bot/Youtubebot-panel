@@ -1018,8 +1018,12 @@ async function videoIslem(islem, id, buton) {
       if (islem === "izle") $("#oynat_" + id).innerHTML = `<video src="${url}" controls autoplay playsinline></video>`;
       else { const a = document.createElement("a"); a.href = url; a.download = id + ".mp4"; a.click(); }
     } catch (e) {
-      // Tarayıcı doğrudan indirmeye izin vermezse GitHub'da aç (GitHub'a giriş yapmış olman gerekir)
-      bildir("Panelden açılamadı, GitHub'da açılıyor…"); window.open(githubLinki(v), "_blank");
+      // 19 Kasım 2026: GitHub özel depo dosyalarını artık release-assets.githubusercontent.com'dan CORS izni olmadan
+      // veriyor → panel dosyayı kendisi çekemiyor. GitHub linki, tarayıcıda github.com'a GİRİŞ YAPILMIŞSA çalışır
+      // (giriş yoksa özel depo 404 gösterir).
+      bildir("GitHub videoyu panele vermiyor; GitHub'da açılıyor. 404 / 'Page not found' görürsen bu tarayıcıda önce " +
+             "github.com'a giriş yap (bir kere), sonra tekrar bas.", 9000);
+      window.open(githubLinki(v), "_blank");
     }
     buton.disabled = false; buton.textContent = eski; return;
   }
