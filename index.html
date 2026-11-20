@@ -104,7 +104,7 @@ const VARSAYILAN_AYARLAR = {
   TTS_SES: "tr-TR-AhmetNeural", TTS_HIZ: "+10%", SES_MOTORU: "edge", ELEVENLABS_SES: "75SIZa3vvET95PHhf1yD", KARARTMA: 0.35, VIDEO_KLIP_ONCELIKLI: true,
   ALTYAZI_BOYUT: 96, ALTYAZI_KELIME: 3, HOOK_SURE: 2.8, HOOK_BOYUT: 100,
   GORSEL_CESITLILIK: true, SERI_ETIKETI: true, FON_MUZIGI: true, MUZIK_SESI: 0.16, OTOMATIK_YORUM: true,
-  IZIN_SURESIZ: false, ONERI_KARARLARI: {}, URETIM_DURAKLAT: false, GUNLUK_SURE: 30, AYLIK_BUTCE: 0, BUTCE_DAVRANIS: "ucuz", KONU_NOTU: "", SENARYO_NOTU: "", GORSEL_NOTU: "", CLOUDFLARE_HESAP: "", CLOUDFLARE_HESAP_2: "", CLOUDFLARE_AKTIF: 1, UYGUNLUK_KONTROLU: "kapali", OZEL_KONULAR: [], YUKLEME_ONCEDEN_SAAT: 30, URETIM_RITMI: "gunluk", TALEP_KONTROLU: true, STIL_TERCIHLERI: {}, ANIMASYON_STILI: "Modern bilim anlatım animasyonu gibi temiz, stilize 3D görüntü; içini gösteren kesit görünüm; yumuşak stüdyo ışığı; koyu lacivert arka plan; sıcak turuncu vurgular; mat ve pürüzsüz yüzeyler; yüksek detay; konu ortada", ANIMASYON_VARSAYILAN: false, KANAL_TURU: "bilim", HIKAYE_STILI: "Bütün resim çok sayıda küçük, düzensiz cam taşından oluşan, zengin ayrıntılı mozaik vitray; ince koyu derz çizgileri; camlardan süzülen ışık huzmeleri ve parlayan cam parçaları; arka planda da ayrıntılı desenler, bitkiler, yapılar ve gökyüzü; düz 2D çizim; sıcak toprak kahvesi, altın, kehribar ve bej tonlar; ayrıntılı ama okunaklı karakterler; fotoğraf değil; yazı, harf, dini sembol, haç, hale, melek yok", HIKAYE_SURE: 45, HIKAYE_SERI_ACIK: [], HIKAYE_OGRENME: "dengeli", HIKAYE_CIZIM_MODELI: "@cf/black-forest-labs/flux-2-klein-4b", HIKAYE_KONTROL_ESIK: 7, HIKAYE_YENIDEN_CIZIM: 4, HIKAYE_YENIDEN_BUTCE: 20, HIKAYE_ACIL_HAK: 4, HIKAYE_KALITE_HAK: 3, HIKAYE_GUCLU_ESIK: 3, HIKAYE_KALITE_YEDEK: true, HIKAYE_YAYIN_ESIGI: 5, HIKAYE_HAREKET: "normal", HIKAYE_TAS_BOYUTU: "kapali", HIKAYE_KALIP_ACIK: [], HIKAYE_TON_ACIK: [], HIKAYE_KAPANIS_ACIK: [],
+  IZIN_SURESIZ: false, ONERI_KARARLARI: {}, URETIM_DURAKLAT: false, GUNLUK_SURE: 30, AYLIK_BUTCE: 0, BUTCE_DAVRANIS: "ucuz", KONU_NOTU: "", SENARYO_NOTU: "", GORSEL_NOTU: "", CLOUDFLARE_HESAP: "", CLOUDFLARE_HESAP_2: "", CLOUDFLARE_AKTIF: 1, UYGUNLUK_KONTROLU: "kapali", OZEL_KONULAR: [], YUKLEME_ONCEDEN_SAAT: 30, URETIM_RITMI: "gunluk", TALEP_KONTROLU: true, STIL_TERCIHLERI: {}, ANIMASYON_STILI: "Modern bilim anlatım animasyonu gibi temiz, stilize 3D görüntü; içini gösteren kesit görünüm; yumuşak stüdyo ışığı; koyu lacivert arka plan; sıcak turuncu vurgular; mat ve pürüzsüz yüzeyler; yüksek detay; konu ortada", ANIMASYON_VARSAYILAN: false, KANAL_TURU: "bilim", HIKAYE_STILI: "Bütün resim çok sayıda küçük, düzensiz cam taşından oluşan, zengin ayrıntılı mozaik vitray; ince koyu derz çizgileri; camlardan süzülen ışık huzmeleri ve parlayan cam parçaları; arka planda da ayrıntılı desenler, bitkiler, yapılar ve gökyüzü; düz 2D çizim; sıcak toprak kahvesi, altın, kehribar ve bej tonlar; ayrıntılı ama okunaklı karakterler; fotoğraf değil; yazı, harf, dini sembol, haç, hale, melek yok", HIKAYE_SURE: 35, HIKAYE_SERI_ACIK: [], HIKAYE_OGRENME: "dengeli", HIKAYE_CIZIM_MODELI: "@cf/black-forest-labs/flux-2-klein-4b", HIKAYE_KONTROL_ESIK: 7, HIKAYE_YENIDEN_CIZIM: 4, HIKAYE_YENIDEN_BUTCE: 20, HIKAYE_ACIL_HAK: 4, HIKAYE_KALITE_HAK: 3, HIKAYE_GUCLU_ESIK: 3, HIKAYE_KALITE_YEDEK: true, HIKAYE_YAYIN_ESIGI: 5, HIKAYE_HAREKET: "normal", HIKAYE_TAS_BOYUTU: "kapali", HIKAYE_KALIP_ACIK: [], HIKAYE_TON_ACIK: [], HIKAYE_KAPANIS_ACIK: [],
   HIKAYE_KALIPLARI: {celiski: "Çelişkili açılış → geçmişe dönüş → mücadele / vazgeçiş → ders izleyiciye bağlanır",
     sondan: "Sondaki garip anı göster ama NEDENİNİ ve dersi söyleme → başa dön → hatanın anı → tek cümlelik hikmet",
     iki_kez: "Aynı durumun iki karşılaşması → değişen tek şey → ikinci karşılaşma → ders sahnenin içinden",
@@ -530,7 +530,7 @@ function siradakiAlan() {
       const bk = bekleyenKonu(v.id);
       const hk = v.tur === "hikaye" ? [v.seri || v.seri_secim ? "📺 " + (v.seri || v.seri_secim) : "",
         v.kalip ? "🧩 " + bicimAdi("kalip", v.kalip) : "🧩 kalıp: sistem seçecek", v.ton ? "🎭 " + bicimAdi("ton", v.ton) : "",
-        v.kapanis ? "🎬 " + bicimAdi("kapanis", v.kapanis) : "", `⏱️ ${v.hedef_sure || vAyar("HIKAYE_SURE") || 45} sn`,
+        v.kapanis ? "🎬 " + bicimAdi("kapanis", v.kapanis) : "", `⏱️ ${v.hedef_sure || vAyar("HIKAYE_SURE") || 35} sn`,
         v.ses_id ? "🎙️ özel ses" : "", v.cizim_stili ? "🪟 özel stil" : "", v.video_notu ? "📝 özel talimat" : ""].filter(Boolean).join(" · ") : "";
       konu = `<b>${v.gorunum === "animasyon" ? "🎬 " : ""}${esc(v.baslik || v.konu)}</b>${v.baslik && v.baslik !== v.konu ? `<div class="ince">Konu: ${esc(v.konu)}</div>` : ""}`
         + (hk ? `<div class="ince">${esc(hk)}</div>` : "")
@@ -606,7 +606,7 @@ const hikayeOzelAlan = (p, v) => !hikayeKanali() ? "" : `<details ${v && (v.ses_
   <label>Çizim stili <span class="ince">(boşsa Ayarlar'daki stil; Türkçe yaz)</span></label>
   <textarea id="${p}CizimStili" style="min-height:60px" placeholder="ör. Osmanlı minyatürü gibi, altın varaklı">${esc((v && v.cizim_stili) || "")}</textarea></details>`;
 const hikayeOzelDeger = p => $("#" + p + "SesId") ? {ses_id: $("#" + p + "SesId").value.trim(), cizim_stili: $("#" + p + "CizimStili").value.trim()} : {};
-const gunlukSureAl = () => hikayeKanali() ? (vAyar("HIKAYE_SURE") || 45) : (vAyar("GUNLUK_SURE") || 30);
+const gunlukSureAl = () => hikayeKanali() ? (vAyar("HIKAYE_SURE") || 35) : (vAyar("GUNLUK_SURE") || 30);
 // 🔁 Kanal profili değiştir: şu anki ayarlar kanal_profilleri/<tür>.json'a saklanır, hedef kanalın saklı ayarları geri gelir.
 // Bağlantı / maliyet ayarları iki kanalda ortak kalır.
 const ORTAK_AYARLAR = ["CLOUDFLARE_HESAP", "CLOUDFLARE_HESAP_2", "CLOUDFLARE_AKTIF", "EK_SAGLAYICILAR", "GOREV_MODELLERI", "MALIYET_SIFIR", "AYLIK_BUTCE", "BUTCE_DAVRANIS",
@@ -1195,7 +1195,7 @@ async function ayarlar() {
         API anahtarları, Cloudflare hesabı, yapay zekâ seçimleri ve bütçe iki kanalda ortaktır. Değişiklik bir sonraki üretimde geçerli olur.</p>
     </div>
     <div id="hikayeAlan">
-      <label>⏱️ Hikâye videosu süresi (sn)</label><input type="number" id="hikayeSure" min="1" value="${esc(a.HIKAYE_SURE || 45)}">
+      <label>⏱️ Hikâye videosu süresi (sn)</label><input type="number" id="hikayeSure" min="1" value="${esc(a.HIKAYE_SURE || 35)}">
       <p class="ince">Otomatik hikâyeler bu sürede anlatılır (önerilen 45-50). ⚡ ile istediğin videoda süreyi ayrıca seçersin.</p>
       <label>📺 Hangi serilerden hikâye anlatılsın? <span class="ince">(hepsi işaretliyse hepsinden karışık; haftalık analiz de önerebilir)</span></label>
       <div class="satir" style="flex-wrap:wrap;gap:4px 12px">${SERI_HIKAYE.map(ad => `<label style="font-weight:normal;white-space:nowrap;margin:0"><input type="checkbox" data-hseri="${esc(ad)}" ${!(a.HIKAYE_SERI_ACIK || []).length || a.HIKAYE_SERI_ACIK.includes(ad) ? "checked" : ""} style="width:auto"> ${esc(ad)}</label>`).join("")}</div>
@@ -1704,7 +1704,7 @@ async function ayarlar() {
       KANAL_TURU: $("#kanalTuru").value, HIKAYE_STILI: $("#hikayeStil").value.trim() || VARSAYILAN_AYARLAR.HIKAYE_STILI, HIKAYE_CIZIM_MODELI: $("#hikayeModel").value, HIKAYE_KONTROL_ESIK: say("#hEsik", 7), HIKAYE_YENIDEN_CIZIM: say("#hYeniden", 4),
       HIKAYE_YENIDEN_BUTCE: say("#hButce", 20), HIKAYE_ACIL_HAK: say("#hAcil", 4), HIKAYE_KALITE_HAK: say("#hGuclu", 3), HIKAYE_GUCLU_ESIK: say("#hGucluEsik", 3), HIKAYE_KALITE_YEDEK: true,
       HIKAYE_YAYIN_ESIGI: +$("#hYayinEsik").value, HIKAYE_HAREKET: $("#hHareket").value, HIKAYE_TAS_BOYUTU: $("#hTas").value,
-      HIKAYE_SURE: say("#hikayeSure", 45) || 45,
+      HIKAYE_SURE: say("#hikayeSure", 35) || 35,
       HIKAYE_SERI_ACIK: (() => { const l = [...document.querySelectorAll("[data-hseri]:checked")].map(x => x.dataset.hseri);
         return l.length === SERI_HIKAYE.length ? [] : l; })(),
       ...(() => { bicim._oku(); const r = {HIKAYE_OGRENME: $("#hOgrenme").value};
